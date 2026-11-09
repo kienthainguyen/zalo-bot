@@ -48,11 +48,9 @@ export default {
       vnc_url: config.vncUrl,
     };
     const { position } = runAgent(job, PROMPT, payload);
-    const wait = position > 1 ? ` Đang có ${position - 1} việc trước, em làm lần lượt.` : '';
+    const wait = position > 1 ? ` (làm sau ${position - 1} việc đang chạy)` : '';
     return {
-      reply:
-        `Đã nhận: edit ${job.params.count} video trà mới (mã việc ${job.id}).${wait}\n` +
-        `Em sẽ chọn video trong Google Photos và đưa vào app dựng. Mỗi video dựng khoảng 17 phút, xong em báo lại.`,
+      reply: `Em đã nhận việc dựng ${job.params.count} video trà mới${wait}. Khi nào xong em sẽ báo lại anh vào duyệt.`,
     };
   },
 };

@@ -57,11 +57,9 @@ export default {
       vnc_url: config.vncUrl,
     };
     const { position } = runAgent(job, PROMPT, payload);
-    const wait = position > 1 ? ` Đang có ${position - 1} việc trước, em làm lần lượt.` : '';
+    const wait = position > 1 ? ` (làm sau ${position - 1} việc đang chạy)` : '';
     return {
-      reply:
-        `Đã nhận: dựng ${job.params.count} video đồ họa giải thích về "${job.params.topic}" (mã việc ${job.id}).${wait}\n` +
-        `Em sẽ viết ${job.params.count} kịch bản khác nhau rồi đưa vào app dựng, xong em báo lại.`,
+      reply: `Em đã nhận việc dựng ${job.params.count} video đồ họa về "${job.params.topic}"${wait}. Khi nào xong em sẽ báo lại anh vào duyệt.`,
     };
   },
 };

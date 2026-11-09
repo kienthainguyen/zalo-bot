@@ -109,7 +109,7 @@ test('hướng dẫn', async () => {
 
 test('edit 10 video trà: chạy Claude trên VPS, chặn trùng, nhận báo kết quả', async () => {
   await zalo('Edit cho a 10 video mới về trà');
-  assert.match(lastText(), /edit 10 video trà/);
+  assert.equal(lastText(), 'Em đã nhận việc dựng 10 video trà mới. Khi nào xong em sẽ báo lại anh vào duyệt.');
   await until(() => runs().length === 1);
   const { args, payload } = runs()[0];
   assert.equal(payload.count, 10);
@@ -122,7 +122,9 @@ test('edit 10 video trà: chạy Claude trên VPS, chặn trùng, nhận báo k�
   await zalo('edit 5 video trà');
   assert.match(lastText(), /chưa xong/);
 
-  await until(() => /✅ .*Chờ duyệt/.test(lastText() || ''));
+  await until(() => /Chờ duyệt/.test(lastText() || ''));
+  assert.equal(lastText(), '10 video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ.');
+  assert.ok(!sent.some((m) => /chỉ ghi log/.test(m.text)), 'tin running không được gửi lên Zalo');
   await zalo('trạng thái');
   assert.match(lastText(), /xong/);
 
@@ -142,20 +144,20 @@ test('token sai bị từ chối', async () => {
 test('Claude thoát mà không báo cáo thì bot tự báo', async () => {
   process.env.FAKE_CLAUDE_MODE = 'silent';
   await zalo('edit 2 video trà');
-  await until(() => /không gửi báo cáo/.test(lastText() || ''));
+  await until(() => /chưa xác nhận được kết quả/.test(lastText() || ''));
   delete process.env.FAKE_CLAUDE_MODE;
 });
 
 test('đồ họa: chạy Claude với chủ đề và prompt riêng', async () => {
   const before = runs().length;
   await zalo('dựng cho a 3 video đồ họa giải thích về chủ đề "AI chốt sale tự động"');
-  assert.match(lastText(), /3 video đồ họa giải thích về "AI chốt sale tự động"/);
+  assert.equal(lastText(), 'Em đã nhận việc dựng 3 video đồ họa về "AI chốt sale tự động". Khi nào xong em sẽ báo lại anh vào duyệt.');
   await until(() => runs().length === before + 1);
   const { payload } = runs().at(-1);
   assert.equal(payload.workflow, 'explainer');
   assert.equal(payload.topic, 'AI chốt sale tự động');
   assert.equal(payload.count, 3);
-  await until(() => /✅/.test(lastText() || ''));
+  await until(() => /Chờ duyệt/.test(lastText() || ''));
 });
 
 test('hướng dẫn liệt kê cả luồng đồ họa', async () => {

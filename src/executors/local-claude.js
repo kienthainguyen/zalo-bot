@@ -36,7 +36,7 @@ function next() {
     '--output-format', 'json',
     '--mcp-config', config.agent.mcpConfig,
     '--strict-mcp-config',
-    '--allowedTools', 'mcp__browser', 'Bash(curl:*)',
+    '--allowedTools', 'mcp__browser', 'Bash(curl:*)', 'Bash(sleep:*)',
   ];
   if (config.agent.model) args.push('--model', config.agent.model);
 
@@ -75,10 +75,10 @@ function next() {
     if (current && current.status === 'running') {
       const ok = code === 0 && !err;
       const msg = ok
-        ? 'Claude đã chạy xong nhưng không gửi báo cáo. Anh xem "trạng thái" hoặc kiểm tra app giúp em.'
-        : `Claude dừng giữa chừng (mã ${err ? err.message : code}). Log: ${logFile}`;
-      updateJob(job.id, { status: ok ? 'done' : 'failed' }, msg);
-      await sendMessage(job.chatId, `${ok ? '⚠️' : '❌'} [${job.id}] ${msg}`).catch(() => {});
+        ? `Em làm xong việc "${job.title}" nhưng chưa xác nhận được kết quả, anh vào app kiểm tra giúp em ạ.`
+        : `Việc "${job.title}" bị lỗi giữa chừng, anh nhắn em kiểm tra ạ.`;
+      updateJob(job.id, { status: ok ? 'done' : 'failed' }, `${msg} (mã ${err ? err.message : code}, log ${logFile})`);
+      await sendMessage(job.chatId, ok ? msg : `❌ ${msg}`).catch(() => {});
     }
     running = null;
     setImmediate(next);

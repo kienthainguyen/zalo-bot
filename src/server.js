@@ -80,9 +80,9 @@ async function onNotify(req, res) {
   const message = String(body.message || '').slice(0, 4000);
   if (Array.isArray(body.processed) && body.processed.length) addProcessed(job.workflow, job.id, body.processed);
   updateJob(job.id, { status }, message || `Trạng thái: ${status}`);
-  if (message) {
-    const prefix = status === 'done' ? '✅ ' : status === 'failed' ? '❌ ' : '';
-    await sendMessage(job.chatId, `${prefix}[${job.id}] ${message}`);
+  // Anh Kiên chỉ muốn 2 tin ngắn (nhận việc, xong việc). Tin "running" chỉ ghi log, không nhắn Zalo.
+  if (message && status !== 'running') {
+    await sendMessage(job.chatId, status === 'failed' ? `❌ ${message}` : message);
   }
   reply(res, 200, { ok: true });
 }

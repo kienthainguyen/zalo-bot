@@ -34,6 +34,6 @@ export const config = {
     workDir: path.resolve(process.env.AGENT_WORKDIR || './agent'),
     logDir: path.resolve(process.env.AGENT_LOG_DIR || `${process.env.DATA_DIR || './data'}/logs`),
     model: process.env.AGENT_MODEL || '',
-    timeoutMin: Number(process.env.AGENT_TIMEOUT_MIN || 120),
+    timeoutMin: Number(process.env.AGENT_TIMEOUT_MIN || 360), // gồm cả thời gian chờ app dựng xong
   },
 };

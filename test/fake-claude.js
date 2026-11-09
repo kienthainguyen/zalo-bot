@@ -9,5 +9,9 @@ if (process.env.FAKE_CLAUDE_MODE === 'silent') process.exit(0);
 await new Promise((r) => setTimeout(r, Number(process.env.FAKE_CLAUDE_DELAY || 0)));
 await fetch(payload.notify_url, {
   method: 'POST',
-  body: JSON.stringify({ job_id: payload.job_id, token: payload.notify_token, status: 'done', message: `${payload.count} video đã vào Chờ duyệt`, processed: [{ filename: 'IMG_9999.MOV' }] }),
+  body: JSON.stringify({ job_id: payload.job_id, token: payload.notify_token, status: 'running', message: 'đang chọn video (chỉ ghi log)' }),
+});
+await fetch(payload.notify_url, {
+  method: 'POST',
+  body: JSON.stringify({ job_id: payload.job_id, token: payload.notify_token, status: 'done', message: `${payload.count} video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ.`, processed: [{ filename: 'IMG_9999.MOV' }] }),
 });

@@ -7,12 +7,16 @@ Khối `<job-payload>` ở cuối là JSON do bot gửi: `job_id`, `count` (số
 - Trình duyệt: các công cụ `mcp__browser__*` điều khiển Chrome trên VPS, **đã đăng nhập sẵn** video.kienthainguyen.com. Không đăng xuất, không đổi tài khoản, không đóng tab cũ không phải của bạn.
 - `curl` để báo về bot.
 
-## Báo về Zalo
+## Báo về Zalo (rất ngắn gọn)
+Anh Kiên chỉ muốn nhận **một tin duy nhất khi video đã xong và nằm trong Chờ duyệt**. Tin `running` chỉ để ghi nhật ký (bot không gửi lên Zalo), dùng nó để gửi `processed` và ghi chú cho em xem.
+- Tin `done` phải đúng mẫu, không thêm chi tiết: **"N video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ."** (1 video thì: "Video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ."). Nếu có video lỗi không sửa được, thêm đúng 1 câu ngắn: "Có M video bị lỗi, anh xem trong app ạ."
+- Tin `failed`: 1 câu ngắn nói anh cần làm gì (vd đăng nhập lại). Không kèm mã việc, không kể chi tiết kỹ thuật.
+
 ```
 curl -sS -X POST "<notify_url>" -H 'Content-Type: application/json' \
   -d '{"job_id":"<job_id>","token":"<notify_token>","status":"running","message":"..."}'
 ```
-- `status`: `running`, `done`, `failed`. `message` tiếng Việt, ngắn. Không báo quá 4 lần.
+- `status`: `running`, `done`, `failed`. `message` tiếng Việt, ngắn. 
 - Gửi kèm `"processed":[{"topic":"...","angle":"góc kịch bản","title":"tiêu đề video"}]` cho các video đã đưa vào dựng.
 - **Luôn** kết thúc bằng một lần báo `done` hoặc `failed`.
 
@@ -30,6 +34,7 @@ Gặp trang đăng nhập của app hoặc Google: dừng, báo `failed`: "Chrom
    - Bấm nút dựng (vd "AI dựng video"). Đợi tới khi việc xuất hiện trong "Tiến trình dựng video" hoặc "Video của tôi", rồi mới làm video tiếp theo (mở lại "Tạo video" nếu form bị xóa).
    - Không bấm nút nào mở hộp thoại alert/confirm của trình duyệt.
    - Nếu app có nút tạo nhiều video cùng lúc cho chế độ này thì vẫn phải bảo đảm mỗi video một kịch bản khác nhau.
-4. **Kiểm tra**: mở chi tiết từng video vừa tạo, đợi tối đa 5 phút xem nhật ký dựng có chạy (không báo "Lỗi"). Nếu lỗi do nội dung (ví dụ kịch bản quá ngắn/quá dài) thì sửa kịch bản và tạo lại 1 lần.
-5. Báo `done` (ghi rõ phong cách đã dùng): "Đã đưa N video đồ họa về "<topic>" vào dựng, phong cách Kiên chia sẻ AI: 1) <tiêu đề 1> (góc ...), 2) ..., 3) .... Xem ở Video của tôi → Chờ duyệt." Nếu có video lỗi không sửa được thì nói rõ.
+4. **Chờ dựng xong.** Lặp: chạy `sleep 180` (đặt timeout lệnh 240000 ms), rồi mở "Video của tôi" kiểm tra trạng thái từng video vừa tạo. Xong khi mọi video đều ở **Chờ duyệt** (hoặc Lỗi). Tối đa 3 giờ. Nếu lỗi do nội dung (kịch bản quá ngắn/dài) thì sửa kịch bản và tạo lại 1 lần; lỗi khác (vd lồng tiếng) thì bấm "Thử làm lại" 1 lần.
+   Ghi tiêu đề và góc từng video trong tin `running` kèm `processed`.
+5. Báo `done` theo đúng mẫu ngắn ở trên.
 6. Nếu không tìm thấy mục "Đồ họa giải thích" hoặc form khác hẳn mô tả: báo `failed`, mô tả ngắn form đang thấy để em sửa hướng dẫn.

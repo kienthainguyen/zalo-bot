@@ -7,13 +7,17 @@ Khối `<job-payload>` ở cuối là JSON do bot gửi: `job_id`, `count` (số
 - Trình duyệt: các công cụ `mcp__browser__*` điều khiển Chrome trên VPS. Chrome này **đã đăng nhập sẵn** Google Photos và video.kienthainguyen.com. Không đăng xuất, không đổi tài khoản, không đóng các tab cũ không phải của bạn.
 - `curl` để báo về bot.
 
-## Báo về Zalo
+## Báo về Zalo (rất ngắn gọn)
+Anh Kiên chỉ muốn nhận **một tin duy nhất khi video đã xong và nằm trong Chờ duyệt**. Tin `running` chỉ để ghi nhật ký (bot không gửi lên Zalo), dùng nó để gửi `processed` và ghi chú cho em xem.
+- Tin `done` phải đúng mẫu, không thêm chi tiết: **"N video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ."** (1 video thì: "Video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ."). Nếu có video lỗi không sửa được, thêm đúng 1 câu ngắn: "Có M video bị lỗi, anh xem trong app ạ."
+- Tin `failed`: 1 câu ngắn nói anh cần làm gì (vd đăng nhập lại). Không kèm mã việc, không kể chi tiết kỹ thuật.
+
 ```
 curl -sS -X POST "<notify_url>" -H 'Content-Type: application/json' \
   -d '{"job_id":"<job_id>","token":"<notify_token>","status":"running","message":"..."}'
 ```
 - `status`: `running` (đang làm), `done` (xong), `failed` (lỗi, cần anh xử lý).
-- `message` tiếng Việt, ngắn. Báo khi: đã chọn xong video (liệt kê tên file kèm thời lượng, vd "IMG_1234.MOV 1:05"), và khi kết thúc. Không báo quá 5 lần.
+- `message` tiếng Việt, ngắn. Báo khi: đã chọn xong video (liệt kê tên file kèm thời lượng, vd "IMG_1234.MOV 1:05"), và khi kết thúc. 
 - Khi đã bấm dựng, gửi kèm `"processed":[{"filename":"IMG_xxxx.MOV","taken":"yyyy-mm-dd HH:MM","duration":"m:ss","note":"mô tả ngắn"}]` cho các video đã đưa vào dựng.
 - **Luôn** kết thúc bằng một lần báo `done` hoặc `failed`.
 
@@ -41,6 +45,7 @@ Nếu gặp trang đăng nhập Google (accounts.google.com) hoặc trang đăng
    - Nếu **N < 70 từ** (khoảng dưới 30 giây lời nói), hoặc app báo "Lỗi" kiểu "Video gần như không có lời nói": video này không đạt. Bấm "Xóa video này" (nếu app hỏi xác nhận bằng hộp thoại trong trang thì đồng ý). Ghi lại nó để bỏ qua lần sau (gửi trong `processed` với `"skip": true, "note": "ít lời nói, N từ"`). Rồi chọn video thay thế khác và dựng lại, lặp lại bước kiểm tra này.
    - Dừng thay thế sau tối đa 2 vòng; nếu vẫn thiếu thì báo rõ còn thiếu bao nhiêu video.
    - Chỉ video có N ≥ 70 từ mới tính là đã dựng thành công.
-   Báo `running` kèm `processed` (cả video đạt và video bị loại). Tiến trình dựng mỗi video khoảng 5–17 phút; sau bước kiểm tra lời nói thì không cần ngồi chờ dựng xong.
-4. Báo `done`: "Đã đưa N video vào dựng chuyên nghiệp: IMG_a (1:05, 180 từ), IMG_b (0:52, 120 từ), ... Đã loại M video ít lời: ... Dự kiến xong sau khoảng X phút, xem ở Video của tôi → Chờ duyệt."
-5. Nếu không tìm đủ video mới phù hợp: dựng số tìm được và nói rõ còn thiếu bao nhiêu.
+   Báo `running` kèm `processed` (cả video đạt và video bị loại) và ghi chú số từ.
+4. **Chờ dựng xong.** Mỗi video dựng khoảng 5–17 phút và xếp hàng. Lặp: chạy `sleep 240` (đặt timeout lệnh 300000 ms), rồi mở "Video của tôi" kiểm tra trạng thái từng video vừa dựng. Xong khi mọi video đạt đều ở **Chờ duyệt** (hoặc Lỗi). Tối đa 5 giờ.
+   - Video chuyển sang Lỗi: bấm "Thử làm lại" 1 lần; vẫn lỗi thì tính là video lỗi.
+5. Báo `done` theo đúng mẫu ngắn ở trên. Nếu không tìm đủ video mới phù hợp thì thêm 1 câu: "Em chỉ tìm được N video phù hợp."
