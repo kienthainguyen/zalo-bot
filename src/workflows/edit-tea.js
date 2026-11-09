@@ -21,6 +21,7 @@ export default {
 
   match(text) {
     const n = normalize(text);
+    if (/\bdo hoa\b/.test(n)) return null; // lệnh đồ họa giải thích thuộc luồng explainer
     const verb = /\b(edit|dung|lam|cat ghep)\b/.test(n);
     const topic = /\b(tra|che)\b/.test(n);
     if (!verb || !topic || !/\b(video|clip)\b/.test(n)) return null;

@@ -21,6 +21,8 @@ process.env.FAKE_CLAUDE_DELAY = '200';
 const { createServer } = await import('../src/server.js');
 const { jobToken } = await import('../src/notify.js');
 const editTea = (await import('../src/workflows/edit-tea.js')).default;
+const explainerMod = await import('../src/workflows/explainer.js');
+const explainer = explainerMod.default;
 
 const realFetch = globalThis.fetch;
 const sent = [];
@@ -78,6 +80,16 @@ test('match lệnh edit trà', () => {
   assert.equal(editTea.match('đăng 1 video lên fb'), null);
 });
 
+test('match lệnh đồ họa giải thích', () => {
+  assert.deepEqual(explainer.match('dựng cho a 3 video đồ họa giải thích về chủ đề "Ai chốt sale tự động"'), { count: 3, topic: 'Ai chốt sale tự động' });
+  assert.deepEqual(explainer.match('Làm 2 video đồ hoạ giải thích về chủ đề AI chăm sóc khách hàng'), { count: 2, topic: 'AI chăm sóc khách hàng' });
+  assert.deepEqual(explainer.match('tạo video đồ họa về “Trà shan tuyết là gì”'), { count: 3, topic: 'Trà shan tuyết là gì' });
+  assert.equal(explainer.match('Edit cho a 10 video mới về trà'), null);
+  // lệnh đồ họa về trà không được rơi vào luồng edit trà
+  assert.equal(editTea.match('dựng 3 video đồ họa giải thích về "cách pha trà"'), null);
+  assert.match(explainer.validate({ count: 3, topic: null }), /chủ đề/);
+});
+
 test('sai secret bị từ chối', async () => {
   assert.equal(await zalo('hướng dẫn', 'owner1', 'wrong'), 403);
 });
@@ -132,6 +144,23 @@ test('Claude thoát mà không báo cáo thì bot tự báo', async () => {
   await zalo('edit 2 video trà');
   await until(() => /không gửi báo cáo/.test(lastText() || ''));
   delete process.env.FAKE_CLAUDE_MODE;
+});
+
+test('đồ họa: chạy Claude với chủ đề và prompt riêng', async () => {
+  const before = runs().length;
+  await zalo('dựng cho a 3 video đồ họa giải thích về chủ đề "AI chốt sale tự động"');
+  assert.match(lastText(), /3 video đồ họa giải thích về "AI chốt sale tự động"/);
+  await until(() => runs().length === before + 1);
+  const { payload } = runs().at(-1);
+  assert.equal(payload.workflow, 'explainer');
+  assert.equal(payload.topic, 'AI chốt sale tự động');
+  assert.equal(payload.count, 3);
+  await until(() => /✅/.test(lastText() || ''));
+});
+
+test('hướng dẫn liệt kê cả luồng đồ họa', async () => {
+  await zalo('hướng dẫn');
+  assert.match(lastText(), /đồ họa giải thích/);
 });
 
 test('lệnh lạ', async () => {

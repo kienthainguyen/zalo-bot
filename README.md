@@ -15,6 +15,7 @@ Zalo ──webhook──> VPS
 | Lệnh (có dấu hay không đều được) | Việc bot làm |
 |---|---|
 | `Edit cho a 10 video mới về trà` | Chọn 10 video trà mới trong Google Photos, đưa vào app dựng chuyên nghiệp |
+| `Dựng cho a 3 video đồ họa giải thích về chủ đề "AI chốt sale tự động"` | Viết 3 kịch bản khác nhau theo chủ đề, dựng 3 video ở mục "Đồ họa giải thích" của app |
 | `trạng thái` | Xem 5 việc gần đây |
 | `hướng dẫn` | Danh sách lệnh |
 | `id` | Xem Zalo id của mình |
