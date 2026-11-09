@@ -24,7 +24,8 @@ Nếu gặp trang đăng nhập Google (accounts.google.com) hoặc trang đăng
 
 ## Quy trình
 1. **Chọn video** trong Google Photos (https://photos.google.com, tìm "video trà"): video về trà/chè Thái Nguyên (làm chè, sao chè, pha trà, rót trà, bán chè), có người nói trước máy. Ưu tiên file gốc IMG_xxxx.MOV. Bỏ qua video đã edit sẵn (có phụ đề in trên hình, tên kiểu "...Trà Kiên Thái Ng.mp4"), ScreenRecording_*, và video trong danh sách đã dựng.
-   **Thời lượng bắt buộc 40 giây đến 2 phút (0:40–2:00). Đây là điều kiện cứng, anh Kiên đã nhắc vì có lần chọn nhầm video 3 giây.**
+   **Thời lượng bắt buộc 40 giây đến 2 phút (0:40–2:00).**
+   **Phải là video có người NÓI gần như suốt video** (giới thiệu, kể chuyện, nói trước máy). Chế độ "Video quay có người nói" chỉ giữ đoạn có lời, nên video chủ yếu là cảnh pha trà / cận cảnh tay / im lặng sẽ ra video chỉ vài giây (đã xảy ra: IMG_0195 dài 108 giây nhưng chỉ 21 từ → ra 3,8 giây). Ưu tiên video thấy rõ mặt người đang nói, nhìn vào máy.
    - Chỉ chọn mục có nhãn thời lượng video (vd "1:12") trên ô ảnh. **Không** chọn ảnh Live Photo / ảnh chuyển động (Motion Photo): chúng chỉ dài khoảng 3 giây, thường có biểu tượng hình tròn đồng tâm hoặc chữ "LIVE", và không có nhãn thời lượng.
    - Với mỗi video định chọn: mở video, bấm phím i để mở bảng thông tin, đọc **tên file và thời lượng thật**. Thời lượng < 0:40 hoặc > 2:00 → bỏ, tìm video khác. Tên file đuôi .HEIC/.JPG (ảnh) → bỏ.
    - Ghi lại ngày giờ quay (đến giây), thời lượng, tên file của đúng `count` video đạt điều kiện. Có thể chạy JS trên lưới ảnh để lọc nhanh theo nhãn thời lượng, nhưng vẫn phải xác nhận lại bằng bảng thông tin.
@@ -36,6 +37,10 @@ Nếu gặp trang đăng nhập Google (accounts.google.com) hoặc trang đăng
    - **Kiểm tra lần cuối trong app**: mọi video trong Video nguồn đều "xong" (không lỗi), đúng tên file đã chọn, và thời lượng (nếu app hiện) trong khoảng 0:40–2:00. Có video sai thì xóa khỏi danh sách và thay video khác trước khi dựng.
    - "Cài đặt nâng cao" → "Dựng chuyên nghiệp" → bấm "AI dựng video".
    - Không bấm nút nào mở hộp thoại alert/confirm của trình duyệt.
-3. Báo `running` kèm `processed`. Tiến trình ở khung "Tiến trình dựng video" (mỗi video khoảng 17 phút, xếp hàng). Không cần ngồi chờ dựng xong.
-4. Báo `done`: "Đã đưa N video vào dựng chuyên nghiệp: IMG_a (1:05), IMG_b (0:52), ... Dự kiến xong sau khoảng X phút, xem ở Video của tôi → Chờ duyệt."
+3. **Kiểm tra lượng lời nói (bắt buộc).** Sau khi bấm dựng, mở chi tiết từng video vừa tạo (trong "Video của tôi" hoặc khung "Tiến trình dựng video"). Đợi tới khi nhật ký có dòng `[2/8] Nghe xong: N từ` (thường 1–3 phút; kiểm tra lại mỗi 30 giây, tối đa 10 phút).
+   - Nếu **N < 70 từ** (khoảng dưới 30 giây lời nói), hoặc app báo "Lỗi" kiểu "Video gần như không có lời nói": video này không đạt. Bấm "Xóa video này" (nếu app hỏi xác nhận bằng hộp thoại trong trang thì đồng ý). Ghi lại nó để bỏ qua lần sau (gửi trong `processed` với `"skip": true, "note": "ít lời nói, N từ"`). Rồi chọn video thay thế khác và dựng lại, lặp lại bước kiểm tra này.
+   - Dừng thay thế sau tối đa 2 vòng; nếu vẫn thiếu thì báo rõ còn thiếu bao nhiêu video.
+   - Chỉ video có N ≥ 70 từ mới tính là đã dựng thành công.
+   Báo `running` kèm `processed` (cả video đạt và video bị loại). Tiến trình dựng mỗi video khoảng 5–17 phút; sau bước kiểm tra lời nói thì không cần ngồi chờ dựng xong.
+4. Báo `done`: "Đã đưa N video vào dựng chuyên nghiệp: IMG_a (1:05, 180 từ), IMG_b (0:52, 120 từ), ... Đã loại M video ít lời: ... Dự kiến xong sau khoảng X phút, xem ở Video của tôi → Chờ duyệt."
 5. Nếu không tìm đủ video mới phù hợp: dựng số tìm được và nói rõ còn thiếu bao nhiêu.
