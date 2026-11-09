@@ -1,0 +1,11 @@
+[Unit]
+Description=Trinh quan ly cua so (de keo tha cua so qua noVNC)
+After=zb-xvfb.service
+Requires=zb-xvfb.service
+[Service]
+User=zalobot
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/fluxbox
+Restart=always
+[Install]
+WantedBy=multi-user.target

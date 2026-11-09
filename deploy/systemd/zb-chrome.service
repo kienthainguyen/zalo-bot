@@ -1,0 +1,12 @@
+[Unit]
+Description=Chrome cua bot (giu dang nhap trong chrome-profile)
+After=zb-xvfb.service
+Requires=zb-xvfb.service
+[Service]
+User=zalobot
+Environment=DISPLAY=:99
+ExecStart=/usr/bin/google-chrome --user-data-dir=/opt/zalo-bot/chrome-profile --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 --no-first-run --no-default-browser-check --disable-dev-shm-usage --lang=vi --start-maximized
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

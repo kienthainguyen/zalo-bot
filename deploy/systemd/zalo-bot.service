@@ -1,0 +1,14 @@
+[Unit]
+Description=Bot Zalo "Bot Tro li ra lenh"
+After=network-online.target zb-chrome.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=zalobot
+WorkingDirectory=/opt/zalo-bot
+Environment=HOME=/home/zalobot
+ExecStart=/usr/bin/node --env-file=/opt/zalo-bot/.env src/server.js
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

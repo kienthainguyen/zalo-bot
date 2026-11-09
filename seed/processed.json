@@ -1,0 +1,17 @@
+{
+  "edit_tea": [
+    { "filename": "IMG_7097.MOV", "taken": "2026-10-16 21:23", "duration": "1:32", "note": "pha trà tại bàn trà (Văn Chấn)", "batch": 1 },
+    { "filename": "IMG_3876.MOV", "taken": "2026-02-03 10:35", "duration": "1:42", "note": "ấm trà, chén trà", "batch": 1 },
+    { "filename": "IMG_2106.MOV", "taken": "2025-08-30 15:50", "duration": "1:10", "note": "chế biến/sao chè tại xưởng", "batch": 1 },
+    { "filename": "IMG_1992.MOV", "taken": "2025-08-21 10:58", "duration": "0:48", "note": "ngồi bên đống chè tươi", "batch": 1 },
+    { "filename": "IMG_1291.MOV", "taken": "2025-06-03 09:19", "duration": "1:21", "note": "rót trà, bên đống chè khô", "batch": 1 },
+    { "filename": "IMG_2108.MOV", "taken": "2025-08-30 15:56", "duration": "0:58", "note": "nói trước máy ở xưởng sao chè", "batch": 2 },
+    { "filename": "IMG_1290.MOV", "taken": "2025-06-03 09:17", "duration": "1:46", "note": "cầm gói chè giới thiệu", "batch": 2 },
+    { "filename": "IMG_1594.MOV", "taken": "2025-07-09 18:35", "duration": "0:43", "note": "giới thiệu ở kho", "batch": 2 },
+    { "skip": true, "filename": "copy_CD1CC729…mov", "taken": "2025-04-17 19:20", "note": "đã edit sẵn, có phụ đề" },
+    { "skip": true, "filename": "copy_E0E9DB06…mov", "taken": "2025-03-23 20:45", "note": "đã edit sẵn, có phụ đề" },
+    { "skip": true, "filename": "Rộn ràng Lễ hội giã Cốm….mp4", "taken": "2026-10-12", "note": "đã edit sẵn" },
+    { "skip": true, "taken": "2026-10-16 23:37", "note": "GÓC TRÀ ĐẠO, đã edit sẵn" },
+    { "skip": true, "filename": "ScreenRecording", "taken": "2026-09-29 17:24", "note": "quay màn hình" }
+  ]
+}

@@ -1,0 +1,9 @@
+[Unit]
+Description=noVNC (xem Chrome cua VPS qua trinh duyet, Caddy bao ve bang mat khau)
+After=zb-vnc.service
+[Service]
+User=zalobot
+ExecStart=/usr/bin/websockify --web /usr/share/novnc 127.0.0.1:6080 127.0.0.1:5900
+Restart=always
+[Install]
+WantedBy=multi-user.target

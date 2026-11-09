@@ -1,0 +1,10 @@
+[Unit]
+Description=VNC xem man hinh ao (chi nghe localhost)
+After=zb-xvfb.service
+Requires=zb-xvfb.service
+[Service]
+User=zalobot
+ExecStart=/usr/bin/x11vnc -display :99 -forever -shared -localhost -rfbport 5900 -nopw -quiet
+Restart=always
+[Install]
+WantedBy=multi-user.target

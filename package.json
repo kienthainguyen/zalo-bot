@@ -1,0 +1,15 @@
+{
+  "name": "zalo-bot-dieu-khien",
+  "version": "0.1.0",
+  "description": "Bot Zalo \"Bot Trợ lí ra lệnh\": nhận lệnh trên Zalo và chạy các luồng tự động",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "test": "node --test test/*.test.js",
+    "set-webhook": "node --env-file-if-exists=.env scripts/set-webhook.js"
+  }
+}

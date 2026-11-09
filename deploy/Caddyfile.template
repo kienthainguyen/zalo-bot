@@ -1,0 +1,19 @@
+__DOMAIN__ {
+	# Trang noVNC để anh đăng nhập Chrome của VPS. Có mật khẩu.
+	handle_path /vnc/* {
+		basicauth {
+			admin __VNC_HASH__
+		}
+		reverse_proxy 127.0.0.1:6080
+	}
+	# Chỉ mở webhook Zalo và health ra ngoài. /api/* chỉ dùng nội bộ trên VPS.
+	handle /zalo/webhook {
+		reverse_proxy 127.0.0.1:8787
+	}
+	handle /health {
+		reverse_proxy 127.0.0.1:8787
+	}
+	handle {
+		respond 404
+	}
+}
