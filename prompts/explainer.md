@@ -26,10 +26,10 @@ Gặp trang đăng nhập của app hoặc Google: dừng, báo `failed`: "Chrom
 2. Mở https://video.kienthainguyen.com/ → **Tạo video** → ở "Bạn muốn làm video từ gì?" chọn **"Đồ họa giải thích"**. Đọc kỹ form hiện ra (dùng snapshot của trang) để biết ô nào nhập chủ đề / từ khóa / kịch bản.
 3. Với từng kịch bản (mỗi kịch bản là 1 video riêng):
    - Nhập chủ đề/từ khóa (`topic`) vào ô chủ đề. Nếu form có ô kịch bản hoặc ô "Video này nói về gì, muốn nhấn điều gì?" thì dán kịch bản của video đó vào. Nếu chỉ có ô từ khóa thì ghi `topic` kèm góc kịch bản, ví dụ: "AI chốt sale tự động — góc: quy trình 4 bước".
-   - Giữ phong cách dựng mặc định của anh (TRÀ KIÊN THÁI NGUYÊN) trừ khi form bắt buộc chọn khác. Giữ tỷ lệ video dọc.
+   - **Phong cách dựng: chọn "Kiên chia sẻ AI"** trong ô "Chọn phong cách dựng" (KHÔNG dùng TRÀ KIÊN THÁI NGUYÊN, phong cách đó chỉ dành cho video trà). Nếu không thấy phong cách này thì báo `failed` để anh kiểm tra, không tự chọn phong cách khác. Giữ tỷ lệ video dọc.
    - Bấm nút dựng (vd "AI dựng video"). Đợi tới khi việc xuất hiện trong "Tiến trình dựng video" hoặc "Video của tôi", rồi mới làm video tiếp theo (mở lại "Tạo video" nếu form bị xóa).
    - Không bấm nút nào mở hộp thoại alert/confirm của trình duyệt.
    - Nếu app có nút tạo nhiều video cùng lúc cho chế độ này thì vẫn phải bảo đảm mỗi video một kịch bản khác nhau.
 4. **Kiểm tra**: mở chi tiết từng video vừa tạo, đợi tối đa 5 phút xem nhật ký dựng có chạy (không báo "Lỗi"). Nếu lỗi do nội dung (ví dụ kịch bản quá ngắn/quá dài) thì sửa kịch bản và tạo lại 1 lần.
-5. Báo `done`: "Đã đưa N video đồ họa về "<topic>" vào dựng: 1) <tiêu đề 1> (góc ...), 2) ..., 3) .... Xem ở Video của tôi → Chờ duyệt." Nếu có video lỗi không sửa được thì nói rõ.
+5. Báo `done` (ghi rõ phong cách đã dùng): "Đã đưa N video đồ họa về "<topic>" vào dựng, phong cách Kiên chia sẻ AI: 1) <tiêu đề 1> (góc ...), 2) ..., 3) .... Xem ở Video của tôi → Chờ duyệt." Nếu có video lỗi không sửa được thì nói rõ.
 6. Nếu không tìm thấy mục "Đồ họa giải thích" hoặc form khác hẳn mô tả: báo `failed`, mô tả ngắn form đang thấy để em sửa hướng dẫn.
