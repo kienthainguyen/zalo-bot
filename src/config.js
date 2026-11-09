@@ -1,4 +1,5 @@
 // Đọc cấu hình từ biến môi trường (file .env).
+import path from 'node:path';
 function list(name) {
   return (process.env[name] || '')
     .split(',')
@@ -28,9 +29,10 @@ export const config = {
   agent: {
     claudeBin: process.env.CLAUDE_BIN || 'claude',
     preArgs: list('CLAUDE_PRE_ARGS'), // chỉ dùng khi kiểm thử
-    mcpConfig: process.env.AGENT_MCP_CONFIG || './agent/mcp.json',
-    workDir: process.env.AGENT_WORKDIR || './agent',
-    logDir: process.env.AGENT_LOG_DIR || `${process.env.DATA_DIR || './data'}/logs`,
+    // Đường dẫn tuyệt đối: Claude chạy trong thư mục agent/, nên đường dẫn tương đối sẽ sai.
+    mcpConfig: path.resolve(process.env.AGENT_MCP_CONFIG || './agent/mcp.json'),
+    workDir: path.resolve(process.env.AGENT_WORKDIR || './agent'),
+    logDir: path.resolve(process.env.AGENT_LOG_DIR || `${process.env.DATA_DIR || './data'}/logs`),
     model: process.env.AGENT_MODEL || '',
     timeoutMin: Number(process.env.AGENT_TIMEOUT_MIN || 120),
   },

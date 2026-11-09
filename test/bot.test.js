@@ -104,6 +104,8 @@ test('edit 10 video trà: chạy Claude trên VPS, chặn trùng, nhận báo k�
   assert.match(payload.notify_url, /^http:\/\/127\.0\.0\.1:\d+\/api\/notify$/);
   assert.equal(payload.vnc_url, 'https://bot.example.com/vnc/');
   assert.ok(args.includes('-p') && args.includes('mcp__browser'));
+  const mcp = args[args.indexOf('--mcp-config') + 1];
+  assert.ok(path.isAbsolute(mcp) && fs.existsSync(mcp), `mcp-config phải là đường dẫn tuyệt đối có thật: ${mcp}`);
 
   await zalo('edit 5 video trà');
   assert.match(lastText(), /chưa xong/);
