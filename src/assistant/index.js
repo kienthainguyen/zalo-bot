@@ -7,6 +7,7 @@ export const ASSISTANT_HELP = `Trợ lí 3 AI (Claude làm, GPT phản biện, G
 - "Thứ 6 nộp báo cáo quý cho sếp"
 - "Xong việc gọi khách hàng A rồi"
 - "Lập kế hoạch mở chi nhánh mới trong 3 tháng"
+- "Tạo cho anh 1 fanpage Facebook mới tên Trà Kiên Thái Nguyên" (em tự làm trên VPS, chỉ nhắn anh khi cần anh đăng nhập, xác minh, thanh toán)
 Việc phân tích, kế hoạch, đề xuất, báo cáo, hoặc có chữ "kỹ" sẽ chạy đủ 3 AI.
 Lệnh nhanh:
 /viec - việc chưa xong
@@ -76,7 +77,8 @@ export async function handleCommand(text) {
 }
 
 // Tin nhắn thường (không phải lệnh video) giao cho trợ lí.
-export async function askAssistant(text, send) {
+// msg: tin Zalo gốc ({chatId, userId}), để việc thực thi biết báo kết quả về đâu.
+export async function askAssistant(text, send, msg = {}) {
   try {
     if (isAssistantCommand(text)) {
       if (/^\/baocao\s*(ngay|tuan|thang)?\s*$/i.test(text) && assistantEnabled()) {
@@ -87,7 +89,7 @@ export async function askAssistant(text, send) {
     if (!assistantEnabled()) return send(DISABLED);
     const deep = needsCouncil(text);
     if (deep) await send('Em đang làm, có GPT phản biện và Gemini duyệt, anh chờ em chút nhé.');
-    return send(await enqueue(() => handleMessage(text, { deep })));
+    return send(await enqueue(() => handleMessage(text, { deep, chatId: msg.chatId, userId: msg.userId })));
   } catch (e) {
     console.error('[assistant] lỗi', e);
     return send(`Em gặp lỗi khi xử lý (${String(e.message || e).slice(0, 200)}). Anh thử lại sau ít phút nhé.`);

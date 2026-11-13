@@ -12,7 +12,8 @@ import { getJob, updateJob } from './jobs.js';
 import { listProcessed, addProcessed } from './processed.js';
 import { checkJobToken } from './notify.js';
 import { startScheduler } from './assistant/index.js';
-import { getSetting } from './assistant/store.js';
+import { getSetting, addMessage } from './assistant/store.js';
+import { AGENT_TASK, takeInbox } from './assistant/tasks.js';
 
 const seen = new Set(); // chống xử lý trùng khi Zalo gửi lại
 
@@ -78,18 +79,31 @@ async function onNotify(req, res) {
   const job = getJob(body.job_id);
   if (!job || !checkJobToken(body.job_id, body.token)) return reply(res, 403, { message: 'forbidden' });
 
-  const status = ['running', 'done', 'failed'].includes(body.status) ? body.status : job.status;
+  const ask = body.status === 'ask';
+  const status = ['running', 'done', 'failed'].includes(body.status) ? body.status : ask ? 'running' : job.status;
   const message = String(body.message || '').slice(0, 4000);
   if (Array.isArray(body.processed) && body.processed.length) addProcessed(job.workflow, job.id, body.processed);
-  updateJob(job.id, { status }, message || `Trạng thái: ${status}`);
-  // Anh Kiên chỉ muốn 2 tin ngắn (nhận việc, xong việc). Tin "running" chỉ ghi log, không nhắn Zalo.
+  updateJob(job.id, { status, ...(ask ? { waiting: message } : {}) }, message || `Trạng thái: ${status}`);
+  // Anh Kiên chỉ muốn tin ngắn: nhận việc, cần anh làm gì, xong việc. Tin "running" chỉ ghi log, không nhắn Zalo.
   if (message && status !== 'running') {
     await sendMessage(job.chatId, status === 'failed' ? `❌ ${message}` : message);
+  }
+  if (message && ask) await sendMessage(job.chatId, message);
+  // Kết quả việc thực thi đưa vào lịch sử để trợ lí biết khi anh hỏi tiếp.
+  if (job.workflow === AGENT_TASK && message && (ask || status !== 'running')) {
+    addMessage('assistant', `[Việc "${job.title}" ${ask ? 'hỏi anh' : status === 'done' ? 'đã xong' : 'bị lỗi'}] ${message}`);
   }
   reply(res, 200, { ok: true });
 }
 
 // Phiên Claude lấy danh sách video đã dựng để bỏ qua: GET /api/processed?job_id=..&token=..
+// Việc thực thi đọc câu trả lời của anh: GET /api/inbox?job_id=..&token=..
+function onInbox(url, res) {
+  const jobId = url.searchParams.get('job_id');
+  if (!getJob(jobId) || !checkJobToken(jobId, url.searchParams.get('token') || '')) return reply(res, 403, { message: 'forbidden' });
+  reply(res, 200, { messages: takeInbox(jobId) });
+}
+
 function onProcessed(url, res) {
   const jobId = url.searchParams.get('job_id');
   const job = getJob(jobId);
@@ -104,6 +118,7 @@ export function createServer() {
       if (req.method === 'POST' && url.pathname === '/zalo/webhook') return await onWebhook(req, res);
       if (req.method === 'POST' && url.pathname === '/api/notify') return await onNotify(req, res);
       if (req.method === 'GET' && url.pathname === '/api/processed') return onProcessed(url, res);
+      if (req.method === 'GET' && url.pathname === '/api/inbox') return onInbox(url, res);
       if (req.method === 'GET' && url.pathname === '/health') return reply(res, 200, { ok: true });
       reply(res, 404, { message: 'not found' });
     } catch (e) {

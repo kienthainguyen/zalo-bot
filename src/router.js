@@ -59,7 +59,7 @@ export async function handleMessage(msg, send) {
   }
 
   if (/^(\/)?(help|start|huong dan|lenh|menu|\?)$/.test(n)) return send(helpText());
-  if (isAssistantCommand(msg.text)) return askAssistant(msg.text, send);
+  if (isAssistantCommand(msg.text)) return askAssistant(msg.text, send, msg);
   if (/^(\/)?(status|trang thai|tien do)\b/.test(n)) return send(statusText());
 
   for (const w of looksLikeChat(n) ? [] : workflows) {
@@ -98,5 +98,5 @@ export async function handleMessage(msg, send) {
   }
 
   // Không phải lệnh video: giao cho Trợ lí 3 AI.
-  return askAssistant(msg.text, send);
+  return askAssistant(msg.text, send, msg);
 }

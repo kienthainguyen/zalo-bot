@@ -22,12 +22,15 @@ let running = null;
 
 export const queueInfo = () => ({ running: running?.job.id || null, waiting: queue.map((q) => q.job.id) });
 
+const DEFAULT_TOOLS = ['mcp__browser', 'Bash(curl:*)', 'Bash(sleep:*)'];
+
 // promptFile: đường dẫn prompt của luồng. payload: dữ liệu của việc (JSON).
-export function runAgent(job, promptFile, payload) {
+// allowedTools: công cụ Claude Code được dùng (mặc định: trình duyệt + curl + sleep).
+export function runAgent(job, promptFile, payload, { allowedTools = DEFAULT_TOOLS } = {}) {
   const prompt =
     fs.readFileSync(promptFile, 'utf8') +
     `\n\n<job-payload>\n${JSON.stringify(payload, null, 2)}\n</job-payload>\n`;
-  queue.push({ job, prompt });
+  queue.push({ job, prompt, allowedTools });
   const position = queue.length + (running ? 1 : 0);
   setImmediate(next);
   return { position };
@@ -36,7 +39,7 @@ export function runAgent(job, promptFile, payload) {
 function next() {
   if (running || !queue.length) return;
   running = queue.shift();
-  const { job, prompt } = running;
+  const { job, prompt, allowedTools } = running;
   updateJob(job.id, { status: 'running' }, 'Claude bắt đầu làm');
 
   const args = [
@@ -45,7 +48,7 @@ function next() {
     '--output-format', 'json',
     '--mcp-config', config.agent.mcpConfig,
     '--strict-mcp-config',
-    '--allowedTools', 'mcp__browser', 'Bash(curl:*)', 'Bash(sleep:*)',
+    '--allowedTools', ...allowedTools,
   ];
   if (config.agent.model) args.push('--model', config.agent.model);
 
@@ -84,7 +87,9 @@ function next() {
     if (current && current.status === 'running') {
       const ok = code === 0 && !err;
       const msg = ok
-        ? `Em làm xong việc "${job.title}" nhưng chưa xác nhận được kết quả, anh vào app kiểm tra giúp em ạ.`
+        ? job.workflow === 'agent_task'
+          ? `Việc "${job.title}" đã chạy xong nhưng em chưa nhận được kết quả, anh nhắn em kiểm tra ạ.`
+          : `Em làm xong việc "${job.title}" nhưng chưa xác nhận được kết quả, anh vào app kiểm tra giúp em ạ.`
         : `Việc "${job.title}" bị lỗi giữa chừng, anh nhắn em kiểm tra ạ.`;
       updateJob(job.id, { status: ok ? 'done' : 'failed' }, `${msg} (mã ${err ? err.message : code}, log ${logFile})`);
       await sendMessage(job.chatId, ok ? msg : `❌ ${msg}`).catch(() => {});

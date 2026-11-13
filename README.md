@@ -20,6 +20,7 @@ Zalo ──webhook──> VPS
 | `hướng dẫn` | Danh sách lệnh |
 | `id` | Xem Zalo id của mình |
 | Tin nhắn bình thường bất kỳ | Trợ lí 3 AI trả lời, tự ghi việc và ghi nhớ (xem dưới) |
+| `Tạo cho anh 1 fanpage FB mới tên ...`, `tạo kênh YouTube ...`, mọi việc cần thao tác | Trợ lí giao cho Claude Code trên VPS làm thay, chỉ nhắn anh khi cần anh đăng nhập / xác minh / thanh toán |
 | `/viec` | Việc chưa xong |
 | `/xong 12` | Đánh dấu việc #12 đã xong |
 | `/baocao ngay` / `tuan` / `thang` | Báo cáo ngay |
@@ -36,6 +37,7 @@ Tin nhắn không phải lệnh video được giao cho trợ lí (`src/assistan
 - **Việc quan trọng** (có chữ phân tích, kế hoạch, đề xuất, chiến lược, tổng hợp, báo cáo, đánh giá, so sánh, tư vấn, giải pháp, lộ trình, rủi ro, có nên, "kỹ"; hoặc tin dài trên 300 ký tự): **GPT** phản biện → **Gemini** trọng tài quyết giữ nguyên hay bắt Claude sửa 1 lần. Cuối tin có 1 dòng ghi ai đã duyệt. GPT/Gemini lỗi thì vẫn gửi bản của Claude.
 - **Bộ nhớ** ở `data/assistant.json`: việc (sắp làm / đang làm / đã xong / đã huỷ, ưu tiên, hạn), ghi nhớ lâu dài, lịch sử trò chuyện. Mỗi lần gọi Claude đưa vào: ngày giờ VN, ghi nhớ, việc chưa xong, việc xong 7 ngày qua, 16 tin gần nhất.
 - **Tự gửi Zalo** (giờ VN): 7h hằng ngày nhắc việc; 8h thứ Hai báo cáo tuần; 8h ngày 1 báo cáo tháng trước. Báo cáo tuần/tháng cũng qua GPT + Gemini. Gửi tới người đầu tiên trong `ALLOWED_ZALO_IDS`.
+- **Việc thực thi** (`src/assistant/tasks.js`, prompt `prompts/general.md`): khi việc cần thao tác thật, Claude gọi công cụ `start_task` → bot chạy Claude Code trên VPS (Chrome, Bash, tìm kiếm web). Nó tự quyết các chi tiết, chỉ gửi câu hỏi (`status: "ask"`) khi cần anh đăng nhập, nhập OTP, giải CAPTCHA, thanh toán. Anh trả lời bình thường trên Zalo, trợ lí chuyển lời qua `answer_task`, Claude Code đọc ở `GET /api/inbox`. Chờ anh tối đa 120 phút. Các việc trên VPS chạy lần lượt vì dùng chung 1 Chrome.
 - Câu có dấu hiệu trò chuyện (kế hoạch, báo cáo, xong, câu hỏi...) không chạy luồng video, kể cả khi có chữ "video trà".
 - Khoá `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` để trong `/opt/zalo-bot/.env`. Claude Code chạy luồng video không thấy các khoá này (vẫn dùng gói Claude đã đăng nhập).
 

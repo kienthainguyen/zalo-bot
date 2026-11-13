@@ -2,6 +2,7 @@
 import { ai, claudeTextOf } from './ai.js';
 import { config } from '../config.js';
 import * as store from './store.js';
+import { startAgentTask, answerAgentTask, activeAgentTasks } from './tasks.js';
 
 const PLAIN_TEXT_RULE =
   "Tin nhắn gửi qua Zalo nên KHÔNG dùng Markdown (không dùng **, #, bảng). " +
@@ -18,7 +19,9 @@ Nguyên tắc:
 - Khi lập kế hoạch: chia bước cụ thể, có thời hạn, đề xuất tạo các việc tương ứng (hoặc tạo luôn nếu anh yêu cầu).
 - Trả lời đúng trọng tâm, thực tế, ngắn gọn; chỉ dài khi anh cần phân tích sâu.
 - Không bịa số liệu. Không chắc thì nói rõ.
-- Bot này còn có các lệnh tự động dựng video, ví dụ "Edit cho a 10 video mới về trà" hoặc "Dựng cho a 3 video đồ họa giải thích về chủ đề "..."". Bạn không tự chạy được các lệnh đó; nếu anh muốn, nhắc anh nhắn đúng câu lệnh.
+- Bạn có một trợ lí thực thi chạy trên VPS của anh (Claude Code điều khiển Chrome đã đăng nhập Google của anh, có Bash, tìm kiếm web). Anh muốn được làm thay tối đa. Khi anh yêu cầu việc cần thao tác thật (tạo fanpage Facebook, tạo kênh YouTube, đăng bài, điền form, đăng ký tài khoản, tải/sửa file, kiểm tra một trang web, gửi email...): gọi start_task ngay, không hỏi lại những chi tiết tự quyết được. Viết instructions đầy đủ vì trợ lí thực thi không thấy cuộc trò chuyện: mục tiêu, kết quả mong muốn, mọi chi tiết anh đã nói, thông tin liên quan trong phần ghi nhớ (tên thương hiệu, sản phẩm, phong cách). Sau đó trả lời anh 1 câu ngắn là em đã giao việc và sẽ báo khi xong hoặc khi cần anh làm gì.
+- Khi có "Việc đang chạy" chờ anh trả lời và tin của anh là câu trả lời / bổ sung / lệnh dừng cho việc đó: gọi answer_task để chuyển nguyên ý anh, rồi trả lời 1 câu ngắn.
+- Các lệnh dựng video có sẵn (vd "Edit cho a 10 video mới về trà", "Dựng cho a 3 video đồ họa giải thích về chủ đề "..."") chạy bằng luồng riêng: nếu anh muốn dựng video, nhắc anh nhắn đúng câu lệnh, không dùng start_task.
 ${PLAIN_TEXT_RULE}`;
 
 export const CRITIC_SYSTEM =
@@ -85,6 +88,28 @@ const TOOLS = [
     },
   },
   {
+    name: 'start_task',
+    description:
+      'Giao một việc cần thao tác thật (trình duyệt, tài khoản online, file, web) cho trợ lí thực thi trên VPS. Nó tự làm, chỉ hỏi anh qua Zalo khi cần anh đăng nhập, xác minh, thanh toán, và tự báo kết quả.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Tên việc ngắn, vd "Tạo fanpage Trà Kiên Thái Nguyên"' },
+        instructions: { type: 'string', description: 'Mô tả đầy đủ: mục tiêu, kết quả cần có, mọi chi tiết và bối cảnh liên quan' },
+      },
+      required: ['title', 'instructions'],
+    },
+  },
+  {
+    name: 'answer_task',
+    description: 'Chuyển câu trả lời, thông tin bổ sung hoặc lệnh dừng của anh tới một việc thực thi đang chạy.',
+    input_schema: {
+      type: 'object',
+      properties: { job_id: { type: 'string' }, message: { type: 'string' } },
+      required: ['job_id', 'message'],
+    },
+  },
+  {
     name: 'save_memory',
     description: 'Ghi nhớ lâu dài một thông tin quan trọng về anh Kiên, công việc, người liên quan.',
     input_schema: { type: 'object', properties: { content: { type: 'string' } }, required: ['content'] },
@@ -102,9 +127,20 @@ function tools() {
   return list;
 }
 
-export function runTool(name, input = {}) {
+export function runTool(name, input = {}, ctx = {}) {
   try {
     switch (name) {
+      case 'start_task': {
+        if (!ctx.chatId) return 'Lỗi: không có chat để báo kết quả.';
+        const { job, position } = startAgentTask({ ...input, chatId: ctx.chatId, userId: ctx.userId });
+        ctx.startedTask = job.id;
+        return `Đã giao việc (mã ${job.id})` + (position > 1 ? `, đang xếp hàng sau ${position - 1} việc khác.` : ', đang bắt đầu làm.');
+      }
+      case 'answer_task': {
+        const r = answerAgentTask(input.job_id, input.message);
+        if (!r) return 'Không tìm thấy việc này.';
+        return r.closed ? `Việc này đã kết thúc (${r.job.status}), cần giao việc mới nếu muốn làm tiếp.` : 'Đã chuyển lời anh tới việc đang chạy.';
+      }
       case 'add_task':
         return 'Đã tạo: ' + store.formatTask(store.addTask(input));
       case 'update_task': {
@@ -140,6 +176,13 @@ export function contextBlock() {
   lines.push('', 'Việc chưa xong:');
   const open = store.listTasks('open', 60);
   lines.push(...(open.length ? open.map(store.formatTask) : ['(không có)']));
+  const running = activeAgentTasks();
+  if (running.length) {
+    lines.push('', 'Việc đang chạy trên VPS (trợ lí thực thi):');
+    for (const j of running) {
+      lines.push(`[${j.id}] ${j.title} (${j.status === 'queued' ? 'đang xếp hàng' : 'đang làm'})` + (j.waiting ? ` - đang chờ anh trả lời: ${j.waiting}` : ''));
+    }
+  }
   const since = store.ymd(store.addDays(n.v, -7));
   const done = store.tasksDoneBetween(since, '9999');
   if (done.length) {
@@ -180,7 +223,7 @@ export function toPlain(text) {
 }
 
 // Claude xử lý tin mới nhất (đã lưu trong lịch sử), có dùng công cụ.
-export async function runWorker({ effort = 'medium', maxSteps = 10 } = {}) {
+export async function runWorker({ effort = 'medium', maxSteps = 10, ctx = {} } = {}) {
   const messages = historyMessages();
   const system = systemBlocks(WORKER_SYSTEM);
   let text = '';
@@ -193,7 +236,7 @@ export async function runWorker({ effort = 'medium', maxSteps = 10 } = {}) {
     if (resp.stop_reason !== 'tool_use') break;
     const results = resp.content
       .filter((b) => b.type === 'tool_use')
-      .map((b) => ({ type: 'tool_result', tool_use_id: b.id, content: runTool(b.name, b.input) }));
+      .map((b) => ({ type: 'tool_result', tool_use_id: b.id, content: runTool(b.name, b.input, ctx) }));
     messages.push({ role: 'user', content: results });
   }
   return text || 'Dạ em đã ghi nhận.';
@@ -257,11 +300,14 @@ export async function council(request, draft) {
 }
 
 // Xử lý 1 tin nhắn thường của anh. Trả về câu trả lời gửi Zalo.
-export async function handleMessage(text, { deep = needsCouncil(text) } = {}) {
+// chatId/userId: để việc thực thi biết báo kết quả về đâu.
+export async function handleMessage(text, { deep = needsCouncil(text), chatId, userId } = {}) {
   store.addMessage('user', text);
-  let reply = toPlain(await runWorker({ effort: deep ? 'high' : 'medium' }));
+  const ctx = { chatId, userId, startedTask: null };
+  let reply = toPlain(await runWorker({ effort: deep ? 'high' : 'medium', ctx }));
   let note = '';
-  if (deep) ({ text: reply, note } = await council(text, reply));
+  // Đã giao việc thực thi thì câu trả lời chỉ là xác nhận, không cần phản biện.
+  if (deep && !ctx.startedTask) ({ text: reply, note } = await council(text, reply));
   reply = toPlain(reply);
   store.addMessage('assistant', reply);
   return note ? `${reply}\n\n${note}` : reply;
