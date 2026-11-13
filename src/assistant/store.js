@@ -52,6 +52,8 @@ function load() {
   db.memories ??= [];
   db.messages ??= [];
   db.settings ??= {};
+  db.reminders ??= [];
+  db.nextReminderId ??= db.reminders.reduce((m, t) => Math.max(m, t.id), 0) + 1;
   db.nextTaskId ??= db.tasks.reduce((m, t) => Math.max(m, t.id), 0) + 1;
   db.nextMemoryId ??= db.memories.reduce((m, t) => Math.max(m, t.id), 0) + 1;
   return db;
@@ -193,3 +195,36 @@ export function addMessage(role, content) {
 export const recentMessages = (n = 16) => load().messages.slice(-n);
 export const messagesBetween = (start, end) =>
   load().messages.filter((m) => m.created_at >= start && m.created_at < end);
+
+// ---------- hẹn giờ nhắc ----------
+// at: 'YYYY-MM-DD HH:MM' giờ Việt Nam.
+export function addReminder({ at, text }) {
+  load();
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(String(at))) throw new Error('Giờ nhắc phải có dạng YYYY-MM-DD HH:MM');
+  if (!String(text || '').trim()) throw new Error('Thiếu nội dung nhắc');
+  const r = { id: db.nextReminderId++, at: String(at), text: String(text).trim(), created_at: nowInfo().stamp, sent: false };
+  db.reminders.push(r);
+  save();
+  return r;
+}
+export const listReminders = () => load().reminders.filter((r) => !r.sent).sort((a, b) => a.at.localeCompare(b.at));
+export function cancelReminder(id) {
+  load();
+  const i = db.reminders.findIndex((r) => r.id === Number(id) && !r.sent);
+  if (i < 0) return false;
+  db.reminders.splice(i, 1);
+  save();
+  return true;
+}
+// Lấy các nhắc đã tới giờ và đánh dấu đã gửi.
+export function takeDueReminders() {
+  load();
+  const now = nowInfo().stamp;
+  const due = db.reminders.filter((r) => !r.sent && r.at <= now);
+  if (due.length) {
+    for (const r of due) r.sent = true;
+    db.reminders = db.reminders.filter((r) => !r.sent || r.at >= now.slice(0, 10)); // giữ lịch sử trong ngày
+    save();
+  }
+  return due;
+}

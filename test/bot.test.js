@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'zbot-'));
+process.env.BATCH_WAIT_MS = '0';
 process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 process.env.PORT = String(18000 + Math.floor(Math.random() * 1000));
 process.env.ZALO_BOT_TOKEN = '123:test';
@@ -211,4 +212,16 @@ test('phiên kiểm tra thoát không báo gì: thử lại sau, không nhắn a
   delete process.env.FAKE_CLAUDE_MODE;
   assert.equal(sent.length, n);
   assert.ok(getJob(id).nextCheckAt > Date.now());
+});
+
+test('đọc tin ảnh, sticker, không hỗ trợ từ webhook Zalo', async () => {
+  const { parseUpdate } = await import('../src/zalo.js');
+  const base = { from: { id: 'u', display_name: 'K' }, chat: { id: 'c' }, message_id: 'x' };
+  assert.deepEqual(
+    parseUpdate({ result: { event_name: 'message.image.received', message: { ...base, photo: 'https://p/1.jpg', caption: 'hoá đơn' } } }),
+    { kind: 'image', chatId: 'c', userId: 'u', name: 'K', text: 'hoá đơn', photoUrl: 'https://p/1.jpg', messageId: 'x' },
+  );
+  assert.equal(parseUpdate({ result: { event_name: 'message.sticker.received', message: { ...base, sticker: 's1' } } }).kind, 'sticker');
+  assert.equal(parseUpdate({ result: { event_name: 'message.unsupported.received', message: base } }).kind, 'unsupported');
+  assert.equal(parseUpdate({ result: { event_name: 'message.location.received', message: base } }), null);
 });

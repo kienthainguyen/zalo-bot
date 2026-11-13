@@ -7,6 +7,7 @@ import path from 'node:path';
 
 const fake = new URL('./fake-ai-cli.js', import.meta.url).pathname;
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'zbot-cli-'));
+process.env.BATCH_WAIT_MS = '0';
 process.env.PORT = String(20000 + Math.floor(Math.random() * 1000));
 process.env.ALLOWED_ZALO_IDS = 'owner1';
 process.env.NOTIFY_SECRET = 'notify-secret';
@@ -38,7 +39,7 @@ test('tin thường: Claude Code (gói Max) gọi công cụ qua curl về bot',
   assert.ok(store.listTasks('open').some((t) => t.title === 'Gọi khách A'));
   const c = calls()[0];
   assert.equal(c.kind, 'claude');
-  assert.ok(c.argv.includes('-p') && c.argv.includes('--allowedTools') && c.argv.includes('Bash(curl:*)'));
+  assert.ok(c.argv.includes('-p') && c.argv.includes('--allowedTools') && c.argv.some((a) => /^Bash\(curl -sS -X POST http:\/\/127\.0\.0\.1:\d+\/api\/assistant\/tool:\*\)$/.test(a)) && c.argv.includes('Read(./inbox/**)'));
   assert.ok(!c.argv.includes('--model'), 'không ép model khi chưa đặt CLAUDE_MODEL');
   assert.match(c.input, /Anh: mai gọi khách A/);
 });

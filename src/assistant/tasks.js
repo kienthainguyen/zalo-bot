@@ -2,8 +2,8 @@
 // Claude báo tiến độ qua /api/notify, hỏi anh bằng status "ask", đọc câu trả lời của anh qua /api/inbox.
 import { fileURLToPath } from 'node:url';
 import { config } from '../config.js';
-import { createJob, getJob, updateJob, activeJobs } from '../jobs.js';
-import { runAgent } from '../executors/local-claude.js';
+import { createJob, getJob, updateJob, activeJobs, allJobs } from '../jobs.js';
+import { runAgent, cancelAgent } from '../executors/local-claude.js';
 import { jobToken } from '../notify.js';
 
 export const AGENT_TASK = 'agent_task';
@@ -56,3 +56,16 @@ export function takeInbox(jobId) {
 }
 
 export const activeAgentTasks = () => activeJobs(AGENT_TASK);
+
+const LIVE = ['queued', 'running', 'rendering'];
+// Mọi việc chưa xong trên VPS (việc thực thi, dựng video, video đang chờ app dựng).
+export const liveJobs = () => allJobs().filter((j) => LIVE.includes(j.status));
+
+// Dừng 1 việc theo lời anh. Trả về job, hoặc null nếu không có / đã kết thúc.
+export function cancelJob(jobId) {
+  const job = getJob(jobId);
+  if (!job || !LIVE.includes(job.status)) return null;
+  updateJob(job.id, { status: 'cancelled', waiting: null }, 'Anh bảo dừng');
+  cancelAgent(job.id);
+  return job;
+}

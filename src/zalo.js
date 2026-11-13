@@ -46,16 +46,37 @@ export const setWebhook = (url, secretToken) => call('setWebhook', { url, secret
 export const getWebhookInfo = () => call('getWebhookInfo');
 export const deleteWebhook = () => call('deleteWebhook');
 
-// Lấy tin nhắn văn bản từ payload webhook. Trả về null nếu không phải tin văn bản.
+// Đọc tin nhắn từ payload webhook. Zalo Bot chỉ chuyển cho bot: chữ, ảnh (kèm chú thích), sticker.
+// Giọng nói, video, file đến dưới dạng "message.unsupported.received" (không có nội dung).
+// Trả về { kind: text | image | sticker | unsupported, text, photoUrl, ... } hoặc null.
+const KINDS = {
+  'message.text.received': 'text',
+  'message.image.received': 'image',
+  'message.sticker.received': 'sticker',
+  'message.unsupported.received': 'unsupported',
+};
+function photoUrlOf(m) {
+  const p = m.photo ?? m.photo_url ?? m.image ?? m.url;
+  if (typeof p === 'string') return p;
+  if (Array.isArray(p) && p.length) {
+    const last = p.at(-1);
+    return typeof last === 'string' ? last : last?.url || null;
+  }
+  return p?.url || null;
+}
 export function parseUpdate(payload) {
   const r = payload?.result ?? payload;
   const m = r?.message;
-  if (!m || r?.event_name !== 'message.text.received' || typeof m.text !== 'string') return null;
+  const kind = KINDS[r?.event_name];
+  if (!m || !kind) return null;
+  if (kind === 'text' && typeof m.text !== 'string') return null;
   return {
+    kind,
     chatId: m.chat?.id,
     userId: m.from?.id,
     name: m.from?.display_name || '',
-    text: m.text.trim(),
+    text: String((kind === 'image' ? m.caption ?? m.text : m.text) || '').trim(),
+    photoUrl: kind === 'image' ? photoUrlOf(m) : null,
     messageId: m.message_id,
   };
 }

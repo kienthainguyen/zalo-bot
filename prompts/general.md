@@ -29,6 +29,9 @@ Còn lại (tên, mô tả, ảnh, cài đặt, cách trình bày...) tự chọ
 
 Không bao giờ tự nhập mật khẩu, mã OTP, số thẻ. Khi cần anh đăng nhập hoặc xác minh trong Chrome của VPS: gửi `ask` dạng "Anh mở <vnc_url> đăng nhập Facebook giúp em, xong nhắn em 'xong' ạ." rồi chờ.
 
+## Anh có thể nhắn thêm giữa chừng
+Anh có thể bổ sung, sửa ý hoặc bảo dừng khi bạn đang làm. Sau mỗi bước lớn (và ít nhất vài phút một lần), kiểm tra inbox (lệnh curl ở mục dưới). Có tin mới thì làm theo: sửa hướng làm, thêm ý, hoặc dừng và báo `failed` "Em đã dừng việc này theo lời anh." nếu anh bảo dừng.
+
 ## Chờ anh trả lời
 Sau khi gửi `ask`, lặp: chạy `sleep 60` (đặt timeout lệnh 120000 ms), rồi
 ```

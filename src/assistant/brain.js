@@ -2,7 +2,9 @@
 import { ai, claudeTextOf } from './ai.js';
 import { config } from '../config.js';
 import * as store from './store.js';
-import { startAgentTask, answerAgentTask, activeAgentTasks } from './tasks.js';
+import { startAgentTask, answerAgentTask, liveJobs, cancelJob } from './tasks.js';
+import { startWorkflow } from '../dispatch.js';
+import fs from 'node:fs';
 import crypto from 'node:crypto';
 
 const PLAIN_TEXT_RULE =
@@ -21,8 +23,12 @@ Nguyên tắc:
 - Trả lời đúng trọng tâm, thực tế, ngắn gọn; chỉ dài khi anh cần phân tích sâu.
 - Không bịa số liệu. Không chắc thì nói rõ.
 - Bạn có một trợ lí thực thi chạy trên VPS của anh (Claude Code điều khiển Chrome đã đăng nhập Google của anh, có Bash, tìm kiếm web). Anh muốn được làm thay tối đa. Khi anh yêu cầu việc cần thao tác thật (tạo fanpage Facebook, tạo kênh YouTube, đăng bài, điền form, đăng ký tài khoản, tải/sửa file, kiểm tra một trang web, gửi email...): gọi start_task ngay, không hỏi lại những chi tiết tự quyết được. Viết instructions đầy đủ vì trợ lí thực thi không thấy cuộc trò chuyện: mục tiêu, kết quả mong muốn, mọi chi tiết anh đã nói, thông tin liên quan trong phần ghi nhớ (tên thương hiệu, sản phẩm, phong cách). Sau đó trả lời anh 1 câu ngắn là em đã giao việc và sẽ báo khi xong hoặc khi cần anh làm gì.
-- Khi có "Việc đang chạy" chờ anh trả lời và tin của anh là câu trả lời / bổ sung / lệnh dừng cho việc đó: gọi answer_task để chuyển nguyên ý anh, rồi trả lời 1 câu ngắn.
-- Các lệnh dựng video có sẵn (vd "Edit cho a 10 video mới về trà", "Dựng cho a 3 video đồ họa giải thích về chủ đề "..."") chạy bằng luồng riêng: nếu anh muốn dựng video, nhắc anh nhắn đúng câu lệnh, không dùng start_task.
+- Khi có "Việc đang chạy" và tin của anh là câu trả lời / bổ sung / sửa ý cho việc đó: gọi answer_task để chuyển nguyên ý anh (trợ lí thực thi đọc tin này giữa chừng và làm theo). Anh bảo dừng / huỷ: gọi cancel_task. Anh muốn đổi hẳn việc: cancel_task rồi start_task việc mới.
+- Dựng video: anh muốn dựng video trà hoặc video đồ họa giải thích thì gọi video_command với câu lệnh chuẩn, vd "Edit cho a 10 video mới về trà" hoặc "Dựng cho a 3 video đồ họa giải thích về chủ đề \"AI chốt sale\"". Không dùng start_task cho việc dựng video.
+- Hẹn giờ nhắc ("3h chiều nhắc anh gọi khách", "thứ 2 tuần sau nhắc..."): gọi set_reminder với giờ Việt Nam dạng YYYY-MM-DD HH:MM. Đến giờ bot tự nhắn anh.
+- Anh có thể gửi nhiều tin liên tiếp: đọc hết, tổng hợp thành các ý rồi mới làm. Có nhiều việc thì làm lần lượt từng việc, trả lời gộp gọn trong 1 tin.
+- Ảnh anh gửi: xem kỹ (đọc chữ trong ảnh, hoá đơn, sản phẩm, màn hình lỗi...) và làm theo yêu cầu kèm ảnh; không kèm yêu cầu thì mô tả ngắn và hỏi anh muốn làm gì.
+- Link anh gửi: đọc nội dung bằng WebFetch rồi làm theo yêu cầu (tóm tắt, phân tích...). Link cần đăng nhập (Google Drive, Facebook, Google Photos) hoặc video (YouTube...) thì start_task để trợ lí thực thi mở bằng Chrome của VPS.
 ${PLAIN_TEXT_RULE}`;
 
 export const CRITIC_SYSTEM =
@@ -111,6 +117,30 @@ const TOOLS = [
     },
   },
   {
+    name: 'cancel_task',
+    description: 'Dừng một việc đang chạy trên VPS (việc thực thi hoặc việc dựng video) theo id trong "Việc đang chạy".',
+    input_schema: { type: 'object', properties: { job_id: { type: 'string' } }, required: ['job_id'] },
+  },
+  {
+    name: 'video_command',
+    description: 'Chạy lệnh dựng video có sẵn của bot (edit video trà, dựng video đồ họa giải thích) bằng câu lệnh chuẩn.',
+    input_schema: { type: 'object', properties: { command: { type: 'string', description: 'Câu lệnh chuẩn, vd "Edit cho a 5 video mới về trà"' } }, required: ['command'] },
+  },
+  {
+    name: 'set_reminder',
+    description: 'Hẹn giờ nhắn nhắc anh trên Zalo.',
+    input_schema: {
+      type: 'object',
+      properties: { at: { type: 'string', description: 'Giờ Việt Nam dạng YYYY-MM-DD HH:MM' }, text: { type: 'string', description: 'Nội dung nhắc' } },
+      required: ['at', 'text'],
+    },
+  },
+  {
+    name: 'cancel_reminder',
+    description: 'Huỷ một lời nhắc theo id.',
+    input_schema: { type: 'object', properties: { id: { type: 'integer' } }, required: ['id'] },
+  },
+  {
     name: 'save_memory',
     description: 'Ghi nhớ lâu dài một thông tin quan trọng về anh Kiên, công việc, người liên quan.',
     input_schema: { type: 'object', properties: { content: { type: 'string' } }, required: ['content'] },
@@ -128,9 +158,26 @@ function tools() {
   return list;
 }
 
-export function runTool(name, input = {}, ctx = {}) {
+export async function runTool(name, input = {}, ctx = {}) {
   try {
     switch (name) {
+      case 'cancel_task': {
+        const job = cancelJob(input.job_id);
+        return job ? `Đã dừng việc "${job.title}".` : 'Không có việc nào đang chạy với mã này.';
+      }
+      case 'video_command': {
+        if (!ctx.chatId) return 'Lỗi: không có chat để báo kết quả.';
+        const r = await startWorkflow(String(input.command || ''), { chatId: ctx.chatId, userId: ctx.userId });
+        if (!r.matched) return 'Câu lệnh không khớp lệnh dựng video nào. Lệnh chuẩn: "Edit cho a N video mới về trà" hoặc "Dựng cho a N video đồ họa giải thích về chủ đề \"...\"".';
+        if (r.job) ctx.startedTask = r.job.id;
+        return `Bot trả lời: ${r.reply}`;
+      }
+      case 'set_reminder': {
+        const r = store.addReminder(input);
+        return `Đã hẹn nhắc #${r.id} lúc ${r.at}: ${r.text}`;
+      }
+      case 'cancel_reminder':
+        return store.cancelReminder(input.id) ? 'Đã huỷ nhắc.' : 'Không tìm thấy lời nhắc này.';
       case 'start_task': {
         if (!ctx.chatId) return 'Lỗi: không có chat để báo kết quả.';
         const { job, position } = startAgentTask({ ...input, chatId: ctx.chatId, userId: ctx.userId });
@@ -177,12 +224,18 @@ export function contextBlock() {
   lines.push('', 'Việc chưa xong:');
   const open = store.listTasks('open', 60);
   lines.push(...(open.length ? open.map(store.formatTask) : ['(không có)']));
-  const running = activeAgentTasks();
+  const running = liveJobs();
   if (running.length) {
-    lines.push('', 'Việc đang chạy trên VPS (trợ lí thực thi):');
+    const st = { queued: 'đang xếp hàng', running: 'đang làm', rendering: 'app đang dựng video' };
+    lines.push('', 'Việc đang chạy trên VPS:');
     for (const j of running) {
-      lines.push(`[${j.id}] ${j.title} (${j.status === 'queued' ? 'đang xếp hàng' : 'đang làm'})` + (j.waiting ? ` - đang chờ anh trả lời: ${j.waiting}` : ''));
+      lines.push(`[${j.id}] ${j.title} (${st[j.status]})` + (j.waiting ? ` - đang chờ anh trả lời: ${j.waiting}` : ''));
     }
+  }
+  const rems = store.listReminders();
+  if (rems.length) {
+    lines.push('', 'Lời nhắc đã hẹn:');
+    for (const r of rems.slice(0, 30)) lines.push(`#${r.id} ${r.at}: ${r.text}`);
   }
   const since = store.ymd(store.addDays(n.v, -7));
   const done = store.tasksDoneBetween(since, '9999');
@@ -228,7 +281,7 @@ const sessions = new Map(); // phiên đang chạy -> ctx
 const sessionToken = (id) => crypto.createHmac('sha256', config.notifySecret || 'local').update('assistant:' + id).digest('hex').slice(0, 32);
 
 // Gọi từ POST /api/assistant/tool. Trả null nếu phiên/token sai.
-export function runSessionTool({ session, token, name, input }) {
+export async function runSessionTool({ session, token, name, input }) {
   const ctx = sessions.get(session);
   if (!ctx || typeof token !== 'string' || token !== sessionToken(session)) return null;
   return runTool(String(name), input && typeof input === 'object' ? input : {}, ctx);
@@ -257,7 +310,12 @@ async function runWorkerCli(ctx) {
       .map((m) => `${m.role === 'user' ? 'Anh' : 'Em'}: ${m.content}`)
       .join('\n\n');
     const prompt = `${contextBlock()}\n\n## Cuộc trò chuyện gần đây (tin cuối là tin mới của anh, cần trả lời)\n${history}`;
-    return await ai.claudeAgent(`${WORKER_SYSTEM}\n\n${toolGuide(session)}`, prompt, ['Bash(curl:*)', 'WebSearch', 'WebFetch']);
+    const url = `http://127.0.0.1:${config.port}/api/assistant/tool`;
+    // curl chỉ được gọi về bot; Read chỉ được đọc ảnh anh gửi trong thư mục inbox.
+    const tools = [`Bash(curl -sS -X POST ${url}:*)`, 'WebSearch', 'WebFetch', 'Read(./inbox/**)'];
+    let p = prompt;
+    if (ctx.images?.length) p += `\n\n## Ảnh anh gửi kèm (dùng Read để xem)\n${ctx.images.map((i) => `- ${i.rel}`).join('\n')}`;
+    return await ai.claudeAgent(`${WORKER_SYSTEM}\n\n${toolGuide(session)}`, p, tools);
   } finally {
     sessions.delete(session);
   }
@@ -268,6 +326,14 @@ async function runWorkerCli(ctx) {
 export async function runWorker({ effort = 'medium', maxSteps = 10, ctx = {} } = {}) {
   if (!config.assistant.anthropicKey) return (await runWorkerCli(ctx)) || 'Dạ em đã ghi nhận.';
   const messages = historyMessages();
+  // Ảnh anh gửi: đưa thẳng vào tin cuối.
+  if (ctx.images?.length && messages.at(-1)?.role === 'user') {
+    const last = messages.at(-1);
+    last.content = [
+      ...ctx.images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mediaType, data: fs.readFileSync(i.path).toString('base64') } })),
+      { type: 'text', text: last.content },
+    ];
+  }
   const system = systemBlocks(WORKER_SYSTEM);
   let text = '';
   for (let step = 0; step < maxSteps; step++) {
@@ -277,9 +343,10 @@ export async function runWorker({ effort = 'medium', maxSteps = 10, ctx = {} } =
     messages.push({ role: 'assistant', content: resp.content });
     if (resp.stop_reason === 'pause_turn') continue; // tìm kiếm web đang chạy dở
     if (resp.stop_reason !== 'tool_use') break;
-    const results = resp.content
-      .filter((b) => b.type === 'tool_use')
-      .map((b) => ({ type: 'tool_result', tool_use_id: b.id, content: runTool(b.name, b.input, ctx) }));
+    const results = [];
+    for (const b of resp.content.filter((x) => x.type === 'tool_use')) {
+      results.push({ type: 'tool_result', tool_use_id: b.id, content: await runTool(b.name, b.input, ctx) });
+    }
     messages.push({ role: 'user', content: results });
   }
   return text || 'Dạ em đã ghi nhận.';
@@ -350,9 +417,10 @@ export async function council(request, draft) {
 
 // Xử lý 1 tin nhắn thường của anh. Trả về câu trả lời gửi Zalo.
 // chatId/userId: để việc thực thi biết báo kết quả về đâu.
-export async function handleMessage(text, { deep = needsCouncil(text), chatId, userId } = {}) {
+// images: [{ path, rel, mediaType }] ảnh anh gửi kèm (đã tải về).
+export async function handleMessage(text, { deep = needsCouncil(text), chatId, userId, images = [] } = {}) {
   store.addMessage('user', text);
-  const ctx = { chatId, userId, startedTask: null };
+  const ctx = { chatId, userId, startedTask: null, images };
   let reply = toPlain(await runWorker({ effort: deep ? 'high' : 'medium', ctx }));
   let note = '';
   // Đã giao việc thực thi thì câu trả lời chỉ là xác nhận, không cần phản biện.

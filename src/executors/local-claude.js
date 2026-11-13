@@ -20,6 +20,20 @@ export function agentEnv(env = process.env) {
 const queue = [];
 let running = null;
 
+// Dừng 1 việc: bỏ khỏi hàng chờ, hoặc tắt phiên Claude đang chạy. Trả true nếu có dừng gì.
+export function cancelAgent(jobId) {
+  const i = queue.findIndex((q) => q.job.id === jobId);
+  if (i >= 0) {
+    queue.splice(i, 1);
+    return true;
+  }
+  if (running?.job.id === jobId && running.child) {
+    running.child.kill('SIGTERM');
+    return true;
+  }
+  return false;
+}
+
 export const queueInfo = () => ({ running: running?.job.id || null, waiting: queue.map((q) => q.job.id) });
 
 const DEFAULT_TOOLS = ['mcp__browser', 'Bash(curl:*)', 'Bash(sleep:*)'];
@@ -58,11 +72,11 @@ function next() {
   const log = fs.createWriteStream(logFile);
   let tail = '';
 
-  const child = spawn(config.agent.claudeBin, args, {
+  const child = (running.child = spawn(config.agent.claudeBin, args, {
     cwd: config.agent.workDir,
     env: agentEnv(),
     stdio: ['pipe', 'pipe', 'pipe'],
-  });
+  }));
   const keep = (d) => {
     log.write(d);
     tail = (tail + d.toString()).slice(-3000);

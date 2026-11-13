@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'zbot-ai-'));
+process.env.BATCH_WAIT_MS = '0';
 process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 process.env.ALLOWED_ZALO_IDS = 'owner1';
 process.env.ANTHROPIC_API_KEY = 'test-key';
@@ -237,4 +238,48 @@ test('ghi nhớ chat của anh để gửi báo cáo tự động', () => {
 test('Claude Code trên VPS không thấy khoá API của trợ lí', () => {
   const env = agentEnv({ PATH: '/bin', ANTHROPIC_API_KEY: 'x', OPENAI_API_KEY: 'y', GEMINI_API_KEY: 'z' });
   assert.deepEqual(env, { PATH: '/bin' });
+});
+
+test('gom nhiều tin liên tiếp (chữ + ảnh) rồi mới gọi Claude 1 lần', async () => {
+  const { config } = await import('../src/config.js');
+  config.batchWaitMs = 150;
+  const realFetch = globalThis.fetch;
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+  globalThis.fetch = async (url, opts) =>
+    String(url).startsWith('https://zalo-cdn.example/') ? new Response(png, { headers: { 'content-type': 'image/png' } }) : realFetch(url, opts);
+  script = [text('Dạ em đã xem hoá đơn và ghi việc.')];
+  const m = (o) => route({ chatId: 'chat1', userId: 'owner1', name: 'Kiên', messageId: 'img' + Math.random().toString(36).slice(2), ...o }, send);
+  const done = [m({ kind: 'text', text: 'anh gửi hoá đơn tiền trà' }), m({ kind: 'image', text: '', photoUrl: 'https://zalo-cdn.example/a.png' }), m({ kind: 'text', text: 'nhập giúp anh vào chi phí tháng này' })];
+  await Promise.all(done);
+  globalThis.fetch = realFetch;
+  config.batchWaitMs = 0;
+  assert.equal(calls.length, 1, 'chỉ gọi Claude 1 lần cho cả loạt');
+  const last = calls[0].messages.at(-1);
+  assert.equal(last.content[0].type, 'image');
+  assert.equal(last.content[0].source.media_type, 'image/png');
+  assert.match(last.content[1].text, /^Anh gửi 3 tin liên tiếp:\n1\. anh gửi hoá đơn tiền trà\n2\. \[ảnh 1: \.\/inbox\/img\w+\.png\]\n3\. nhập giúp anh/);
+  assert.deepEqual(sent, ['Dạ em đã xem hoá đơn và ghi việc.']);
+});
+
+test('giọng nói / video / file: báo anh cách gửi khác', async () => {
+  await route({ kind: 'unsupported', chatId: 'chat1', userId: 'owner1', text: '' }, send);
+  assert.match(sent.at(-1), /micro trên bàn phím/);
+  assert.equal(calls.length, 0);
+});
+
+test('hẹn giờ nhắc: tới giờ bot tự nhắn anh', async () => {
+  script = [toolUse('set_reminder', { at: '2026-11-13 15:00', text: 'Gọi khách A' }), text('Dạ 3h chiều em nhắc anh.')];
+  await say('3h chiều nhắc anh gọi khách A');
+  assert.equal(sent.at(-1), 'Dạ 3h chiều em nhắc anh.');
+  assert.match(calls[1].messages.at(-1).content[0].content, /^Đã hẹn nhắc #\d+ lúc 2026-11-13 15:00/);
+  const out = [];
+  await assistant.runDueReports(async (t) => out.push(t)); // 9h: chưa tới giờ
+  assert.ok(!out.some((t) => /Gọi khách A/.test(t)));
+  store.setClock(() => vn('2026-11-13T15:00:30'));
+  await assistant.runDueReports(async (t) => out.push(t));
+  assert.ok(out.includes('⏰ Nhắc anh: Gọi khách A'));
+  out.length = 0;
+  await assistant.runDueReports(async (t) => out.push(t));
+  assert.ok(!out.includes('⏰ Nhắc anh: Gọi khách A'), 'không nhắc lặp');
+  store.setClock(() => vn('2026-11-13T09:00:00'));
 });

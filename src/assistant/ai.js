@@ -37,7 +37,7 @@ export function runCli(bin, args, input, { timeoutMs = 10 * 60_000, cwd } = {}) 
 
 // Thư mục chạy các công cụ AI: để NGOÀI thư mục bot, vì Gemini CLI tự đọc file .env ở thư mục hiện tại
 // và các thư mục cha (sẽ lấy nhầm khoá API thay vì đăng nhập Google).
-function workDir() {
+export function workDir() {
   const d = process.env.AI_WORK_DIR || path.join(os.homedir(), '.zalo-bot-ai');
   fs.mkdirSync(d, { recursive: true });
   return d;

@@ -37,6 +37,9 @@ export const config = {
     timeoutMin: Number(process.env.AGENT_TIMEOUT_MIN || 360), // gồm cả thời gian chờ app dựng xong
   },
 
+  // Gom tin: đợi anh ngừng gửi bấy nhiêu mili giây rồi mới xử lý cả loạt.
+  batchWaitMs: Number(process.env.BATCH_WAIT_MS ?? 10_000),
+
   // Bot mở phiên kiểm tra video đang dựng trên app mỗi bao nhiêu phút.
   videoCheckMin: Number(process.env.VIDEO_CHECK_MIN || 10),
 

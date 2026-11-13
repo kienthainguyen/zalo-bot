@@ -107,7 +107,7 @@ async function onNotify(req, res) {
 // Phiên Claude lấy danh sách video đã dựng để bỏ qua: GET /api/processed?job_id=..&token=..
 // Claude Code của trợ lí gọi công cụ (tạo việc, ghi nhớ, giao việc...): POST /api/assistant/tool
 async function onAssistantTool(req, res) {
-  const result = runSessionTool(await readJson(req));
+  const result = await runSessionTool(await readJson(req));
   if (result == null) return reply(res, 403, { message: 'forbidden' });
   reply(res, 200, { result });
 }

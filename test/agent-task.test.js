@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'zbot-task-'));
+process.env.BATCH_WAIT_MS = '0';
 process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 process.env.PORT = String(19000 + Math.floor(Math.random() * 1000));
 process.env.ZALO_BOT_TOKEN = '123:test';
@@ -99,4 +100,36 @@ test('giao việc thực thi, hỏi anh khi cần đăng nhập, nhận câu tr�
 
   // Inbox sai token bị từ chối.
   assert.equal((await realFetch(`${base}/api/inbox?job_id=${payload.job_id}&token=bad`)).status, 403);
+});
+
+test('anh bảo dừng: trợ lí gọi cancel_task, việc bị dừng', async () => {
+  const runs = () => fs.readFileSync(process.env.FAKE_CLAUDE_LOG, 'utf8').trim().split('\n').map(JSON.parse);
+  const before = runs().length;
+  script = [tool('start_task', { title: 'Tạo kênh YouTube', instructions: 'Tạo kênh YouTube mới' }), text('Dạ em giao việc rồi ạ.')];
+  await zalo('tạo kênh youtube mới cho anh');
+  await until(() => runs().length === before + 1);
+  const id = runs().at(-1).payload.job_id;
+  await until(() => getJob(id).waiting);
+  script = [tool('cancel_task', { job_id: id }), text('Dạ em dừng rồi ạ.')];
+  await zalo('thôi dừng việc đó đi');
+  await until(() => sent.includes('Dạ em dừng rồi ạ.'));
+  assert.equal(getJob(id).status, 'cancelled');
+  await sleep(300);
+  assert.equal(getJob(id).status, 'cancelled', 'không bị ghi đè khi phiên Claude thoát');
+});
+
+test('trợ lí ra lệnh dựng video bằng lời tự nhiên (video_command)', async () => {
+  const runs = () => fs.readFileSync(process.env.FAKE_CLAUDE_LOG, 'utf8').trim().split('\n').map(JSON.parse);
+  const before = runs().length;
+  script = [
+    tool('video_command', { command: 'Edit cho a 2 video mới về trà' }),
+    (p) => {
+      assert.match(p.messages.at(-1).content[0].content, /^Bot trả lời: Em đã nhận việc dựng 2 video trà mới/);
+      return text('Dạ em đã cho dựng 2 video trà ạ.')();
+    },
+  ];
+  await zalo('tuần này anh cần thêm 2 clip chè mới để đăng nhé');
+  await until(() => sent.includes('Dạ em đã cho dựng 2 video trà ạ.'));
+  await until(() => runs().length === before + 1);
+  assert.equal(runs().at(-1).payload.workflow, 'edit_tea');
 });

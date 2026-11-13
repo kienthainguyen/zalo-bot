@@ -2,11 +2,13 @@
 import { config } from './config.js';
 import { normalize } from './text.js';
 import { workflows } from './workflows/index.js';
-import { createJob, updateJob, recentJobs, activeJobs } from './jobs.js';
+import { recentJobs } from './jobs.js';
+import { startWorkflow } from './dispatch.js';
+import { collect, combine } from './inbox.js';
 import { ASSISTANT_HELP, askAssistant, isAssistantCommand } from './assistant/index.js';
 import { getSetting, setSetting } from './assistant/store.js';
 
-const STATUS_VI = { queued: 'đang chờ', running: 'đang chạy', rendering: 'app đang dựng', done: 'xong', failed: 'lỗi' };
+const STATUS_VI = { queued: 'đang chờ', running: 'đang chạy', rendering: 'app đang dựng', done: 'xong', failed: 'lỗi', cancelled: 'đã dừng' };
 
 function helpText() {
   const lines = ['Bot Trợ lí ra lệnh nhận các lệnh sau:'];
@@ -39,12 +41,18 @@ function statusText() {
   ].join('\n');
 }
 
-// msg: { chatId, userId, name, text }. send(text) gửi trả lời về Zalo.
+const UNSUPPORTED =
+  'Zalo chưa chuyển giọng nói, video và file cho bot nên em không nhận được tin vừa rồi. ' +
+  'Giọng nói: anh bấm nút micro trên bàn phím điện thoại để nói thành chữ rồi gửi. ' +
+  'Video, file: anh gửi link Google Drive, Google Photos hoặc YouTube, em mở bằng Chrome của VPS ạ.';
+
+// msg: { kind, chatId, userId, name, text, photoUrl }. send(text) gửi trả lời về Zalo.
 export async function handleMessage(msg, send) {
+  msg = { kind: 'text', ...msg, text: msg.text || '' };
   const n = normalize(msg.text);
 
   // Ai cũng hỏi được id của mình, để anh thêm vào ALLOWED_ZALO_IDS.
-  if (/^(\/)?(id|my id|zalo id)$/.test(n)) {
+  if (msg.kind === 'text' && /^(\/)?(id|my id|zalo id)$/.test(n)) {
     return send(`Zalo id của ${msg.name || 'bạn'}: ${msg.userId}`);
   }
 
@@ -58,45 +66,28 @@ export async function handleMessage(msg, send) {
     setSetting('owner_chat_id', msg.chatId);
   }
 
-  if (/^(\/)?(help|start|huong dan|lenh|menu|\?)$/.test(n)) return send(helpText());
-  if (isAssistantCommand(msg.text)) return askAssistant(msg.text, send, msg);
-  if (/^(\/)?(status|trang thai|tien do)\b/.test(n)) return send(statusText());
-
-  for (const w of looksLikeChat(n) ? [] : workflows) {
-    const params = w.match(msg.text);
-    if (!params) continue;
-
-    const err = w.validate?.(params);
-    if (err) return send(err);
-
-    const force = /\b(van chay|cu chay|chay luon)\b/.test(n);
-    if (w.exclusive && !force) {
-      const busy = activeJobs(w.id);
-      if (busy.length) {
-        return send(
-          `Đang có việc "${w.title}" chưa xong (mã ${busy[0].id}). ` +
-            `Anh đợi việc đó xong, hoặc nhắn lại kèm chữ "vẫn chạy" để chạy song song.`,
-        );
-      }
-    }
-
-    const job = createJob({
-      workflow: w.id,
-      title: w.title,
-      params: { ...params, rawText: msg.text },
-      chatId: msg.chatId,
-      userId: msg.userId,
-    });
-    try {
-      const { reply } = await w.start(job);
-      return send(reply);
-    } catch (e) {
-      updateJob(job.id, { status: 'failed' }, e.message);
-      console.error(`[router] ${w.id} start failed`, e);
-      return send(`Không bắt đầu được "${w.title}": ${e.message}`);
-    }
+  if (msg.kind === 'unsupported') return send(UNSUPPORTED);
+  if (msg.kind === 'text') {
+    // Lệnh nhanh trả lời ngay, không gom.
+    if (/^(\/)?(help|start|huong dan|lenh|menu|\?)$/.test(n)) return send(helpText());
+    if (isAssistantCommand(msg.text)) return askAssistant(msg.text, send, msg);
+    if (/^(\/)?(status|trang thai|tien do)\b/.test(n)) return send(statusText());
   }
+  // Còn lại: gom các tin anh gửi liên tiếp, anh ngừng gửi mới xử lý.
+  return collect(msg, send, flushBatch);
+}
 
-  // Không phải lệnh video: giao cho Trợ lí 3 AI.
-  return askAssistant(msg.text, send, msg);
+async function flushBatch(items, send, msg) {
+  if (items.length === 1 && !items[0].image && !items[0].sticker) return routeText(items[0].text, send, msg);
+  const { text, images } = combine(items);
+  return askAssistant(text, send, msg, images);
+}
+
+// 1 tin chữ: lệnh dựng video thì chạy luồng, còn lại giao cho trợ lí.
+async function routeText(text, send, msg) {
+  if (!looksLikeChat(normalize(text))) {
+    const r = await startWorkflow(text, msg);
+    if (r.matched) return send(r.reply);
+  }
+  return askAssistant(text, send, msg);
 }

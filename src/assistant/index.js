@@ -7,6 +7,9 @@ export const ASSISTANT_HELP = `Trợ lí AI (Claude làm, GPT phản biện): an
 - "Thứ 6 nộp báo cáo quý cho sếp"
 - "Xong việc gọi khách hàng A rồi"
 - "Lập kế hoạch mở chi nhánh mới trong 3 tháng"
+- "3h chiều nay nhắc anh gọi khách A"
+- Gửi ảnh (hoá đơn, sản phẩm, màn hình lỗi...) kèm yêu cầu, hoặc gửi link để em đọc, tóm tắt
+- Gửi nhiều tin liên tiếp: em đợi anh gửi xong, gom lại rồi mới làm. Đang làm mà muốn dừng, sửa hay thêm ý thì anh cứ nhắn
 - "Tạo cho anh 1 fanpage Facebook mới tên Trà Kiên Thái Nguyên" (em tự làm trên VPS, chỉ nhắn anh khi cần anh đăng nhập, xác minh, thanh toán)
 Việc phân tích, kế hoạch, đề xuất, báo cáo, hoặc có chữ "kỹ" sẽ có GPT phản biện.
 Lệnh nhanh:
@@ -78,7 +81,7 @@ export async function handleCommand(text) {
 
 // Tin nhắn thường (không phải lệnh video) giao cho trợ lí.
 // msg: tin Zalo gốc ({chatId, userId}), để việc thực thi biết báo kết quả về đâu.
-export async function askAssistant(text, send, msg = {}) {
+export async function askAssistant(text, send, msg = {}, images = []) {
   try {
     if (isAssistantCommand(text)) {
       if (/^\/baocao\s*(ngay|tuan|thang)?\s*$/i.test(text) && assistantEnabled()) {
@@ -89,7 +92,7 @@ export async function askAssistant(text, send, msg = {}) {
     if (!assistantEnabled()) return send(DISABLED);
     const deep = needsCouncil(text);
     if (deep) await send('Em đang làm, có GPT phản biện, anh chờ em chút nhé.');
-    return send(await enqueue(() => handleMessage(text, { deep, chatId: msg.chatId, userId: msg.userId })));
+    return send(await enqueue(() => handleMessage(text, { deep, chatId: msg.chatId, userId: msg.userId, images })));
   } catch (e) {
     console.error('[assistant] lỗi', e);
     return send(`Em gặp lỗi khi xử lý (${String(e.message || e).slice(0, 200)}). Anh thử lại sau ít phút nhé.`);
@@ -110,6 +113,9 @@ export function dueReports() {
 }
 
 export async function runDueReports(sendToOwner) {
+  for (const r of store.takeDueReminders()) {
+    await sendToOwner(`⏰ Nhắc anh: ${r.text}`).catch((e) => console.error('[assistant] gửi nhắc lỗi', e));
+  }
   for (const kind of dueReports()) {
     store.setSetting(`last_${kind}_report`, store.nowInfo().date); // đánh dấu trước, lỗi cũng không gửi lặp mỗi phút
     try {
