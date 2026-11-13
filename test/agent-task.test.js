@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'zbot-task-'));
+process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 process.env.PORT = String(19000 + Math.floor(Math.random() * 1000));
 process.env.ZALO_BOT_TOKEN = '123:test';
 process.env.ZALO_WEBHOOK_SECRET = 'secret-123';

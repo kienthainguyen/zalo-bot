@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'zbot-ai-'));
+process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 process.env.ALLOWED_ZALO_IDS = 'owner1';
 process.env.ANTHROPIC_API_KEY = 'test-key';
 process.env.OPENAI_API_KEY = 'test-key';

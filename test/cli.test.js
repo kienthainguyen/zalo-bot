@@ -18,6 +18,7 @@ process.env.CODEX_PRE_ARGS = fake;
 process.env.GEMINI_BIN = process.execPath;
 process.env.GEMINI_PRE_ARGS = fake;
 process.env.FAKE_AI_LOG = path.join(process.env.DATA_DIR, 'ai.log');
+process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 
 const { createServer } = await import('../src/server.js');
 const { handleMessage: route } = await import('../src/router.js');
