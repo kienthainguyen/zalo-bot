@@ -63,3 +63,5 @@ export function recentJobs(n = 5) {
 export function activeJobs(workflow) {
   return load().filter((j) => (!workflow || j.workflow === workflow) && ['queued', 'running'].includes(j.status));
 }
+
+export const allJobs = () => load();

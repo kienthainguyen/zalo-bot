@@ -6,7 +6,7 @@ import { createJob, updateJob, recentJobs, activeJobs } from './jobs.js';
 import { ASSISTANT_HELP, askAssistant, isAssistantCommand } from './assistant/index.js';
 import { getSetting, setSetting } from './assistant/store.js';
 
-const STATUS_VI = { queued: 'đang chờ', running: 'đang chạy', done: 'xong', failed: 'lỗi' };
+const STATUS_VI = { queued: 'đang chờ', running: 'đang chạy', rendering: 'app đang dựng', done: 'xong', failed: 'lỗi' };
 
 function helpText() {
   const lines = ['Bot Trợ lí ra lệnh nhận các lệnh sau:'];

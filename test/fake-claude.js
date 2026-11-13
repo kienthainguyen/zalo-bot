@@ -22,11 +22,16 @@ if (payload.workflow === 'agent_task') {
   await notify('done', `Đã tạo fanpage Trà Kiên Thái Nguyên (anh trả lời: ${answer}).`);
   process.exit(0);
 }
+if (payload.watch) {
+  // Phiên kiểm tra: video đã vào Chờ duyệt.
+  const n = payload.watch.length;
+  await notify('done', `${n} video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ.${payload.note ? ' ' + payload.note : ''}`);
+  process.exit(0);
+}
+await notify('running', 'đang chọn video (chỉ ghi log)');
+// Phiên dựng: bấm dựng xong thì giao lại cho bot theo dõi rồi thoát.
+const watch = Array.from({ length: payload.count }, (_, i) => ({ name: `Video ${i + 1}`, source: `IMG_${9999 - i}.MOV` }));
 await fetch(payload.notify_url, {
   method: 'POST',
-  body: JSON.stringify({ job_id: payload.job_id, token: payload.notify_token, status: 'running', message: 'đang chọn video (chỉ ghi log)' }),
-});
-await fetch(payload.notify_url, {
-  method: 'POST',
-  body: JSON.stringify({ job_id: payload.job_id, token: payload.notify_token, status: 'done', message: `${payload.count} video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ.`, processed: [{ filename: 'IMG_9999.MOV' }] }),
+  body: JSON.stringify({ job_id: payload.job_id, token: payload.notify_token, status: 'rendering', message: `đã đưa ${payload.count} video vào dựng`, watch, processed: [{ filename: 'IMG_9999.MOV' }] }),
 });

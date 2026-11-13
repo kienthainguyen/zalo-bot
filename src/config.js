@@ -37,6 +37,9 @@ export const config = {
     timeoutMin: Number(process.env.AGENT_TIMEOUT_MIN || 360), // gồm cả thời gian chờ app dựng xong
   },
 
+  // Bot mở phiên kiểm tra video đang dựng trên app mỗi bao nhiêu phút.
+  videoCheckMin: Number(process.env.VIDEO_CHECK_MIN || 10),
+
   // Trợ lí 3 AI: Claude làm, GPT phản biện, Gemini trọng tài.
   assistant: {
     anthropicKey: process.env.ANTHROPIC_API_KEY || '',

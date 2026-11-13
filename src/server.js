@@ -14,6 +14,7 @@ import { checkJobToken } from './notify.js';
 import { startScheduler } from './assistant/index.js';
 import { getSetting, addMessage } from './assistant/store.js';
 import { AGENT_TASK, takeInbox } from './assistant/tasks.js';
+import { markRendering, startWatcher } from './watcher.js';
 
 const seen = new Set(); // chống xử lý trùng khi Zalo gửi lại
 
@@ -79,6 +80,12 @@ async function onNotify(req, res) {
   const job = getJob(body.job_id);
   if (!job || !checkJobToken(body.job_id, body.token)) return reply(res, 403, { message: 'forbidden' });
 
+  if (body.status === 'rendering') {
+    // Video đã vào app dựng: bot tự theo dõi, không nhắn Zalo.
+    if (Array.isArray(body.processed) && body.processed.length) addProcessed(job.workflow, job.id, body.processed);
+    markRendering(job, body, String(body.message || '').slice(0, 2000));
+    return reply(res, 200, { ok: true });
+  }
   const ask = body.status === 'ask';
   const status = ['running', 'done', 'failed'].includes(body.status) ? body.status : ask ? 'running' : job.status;
   const message = String(body.message || '').slice(0, 4000);
@@ -130,6 +137,7 @@ export function createServer() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   createServer().listen(config.port, config.host, () => console.log(`Bot dang chay o cong ${config.port}`));
+  startWatcher();
   // Nhắc việc 7h, báo cáo tuần/tháng của Trợ lí 3 AI, gửi tới anh (người đầu tiên trong ALLOWED_ZALO_IDS).
   startScheduler(async (text) => {
     const chatId = getSetting('owner_chat_id') || config.allowedUsers[0];

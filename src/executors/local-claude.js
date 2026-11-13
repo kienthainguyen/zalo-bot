@@ -26,11 +26,12 @@ const DEFAULT_TOOLS = ['mcp__browser', 'Bash(curl:*)', 'Bash(sleep:*)'];
 
 // promptFile: đường dẫn prompt của luồng. payload: dữ liệu của việc (JSON).
 // allowedTools: công cụ Claude Code được dùng (mặc định: trình duyệt + curl + sleep).
-export function runAgent(job, promptFile, payload, { allowedTools = DEFAULT_TOOLS } = {}) {
+// onExit(job, code): gọi khi phiên kết thúc; trả true nếu đã tự xử lý trường hợp Claude không báo kết quả.
+export function runAgent(job, promptFile, payload, { allowedTools = DEFAULT_TOOLS, onExit } = {}) {
   const prompt =
     fs.readFileSync(promptFile, 'utf8') +
     `\n\n<job-payload>\n${JSON.stringify(payload, null, 2)}\n</job-payload>\n`;
-  queue.push({ job, prompt, allowedTools });
+  queue.push({ job, prompt, allowedTools, onExit });
   const position = queue.length + (running ? 1 : 0);
   setImmediate(next);
   return { position };
@@ -39,7 +40,7 @@ export function runAgent(job, promptFile, payload, { allowedTools = DEFAULT_TOOL
 function next() {
   if (running || !queue.length) return;
   running = queue.shift();
-  const { job, prompt, allowedTools } = running;
+  const { job, prompt, allowedTools, onExit } = running;
   updateJob(job.id, { status: 'running' }, 'Claude bắt đầu làm');
 
   const args = [
@@ -82,9 +83,15 @@ function next() {
     finished = true;
     clearTimeout(timer);
     log.end();
+    let handled = false;
+    try {
+      handled = Boolean(await onExit?.(getJob(job.id), err ? null : code));
+    } catch (e) {
+      console.error('[agent] onExit', e);
+    }
     const current = getJob(job.id);
-    // Nếu Claude đã tự báo done/failed qua /api/notify thì thôi; nếu chưa thì bot tự báo.
-    if (current && current.status === 'running') {
+    // Nếu Claude đã tự báo done/failed/rendering qua /api/notify thì thôi; nếu chưa thì bot tự báo.
+    if (!handled && current && current.status === 'running') {
       const ok = code === 0 && !err;
       const msg = ok
         ? job.workflow === 'agent_task'

@@ -18,7 +18,7 @@ curl -sS -X POST "<notify_url>" -H 'Content-Type: application/json' \
 ```
 - `status`: `running`, `done`, `failed`. `message` tiếng Việt, ngắn. 
 - Gửi kèm `"processed":[{"topic":"...","angle":"góc kịch bản","title":"tiêu đề video"}]` cho các video đã đưa vào dựng.
-- **Luôn** kết thúc bằng một lần báo `done` hoặc `failed`.
+- **Luôn** kết thúc bằng một lần báo `rendering` (đã đưa video vào dựng) hoặc `failed`.
 
 Các kịch bản đã làm trước đây (để không lặp lại góc cũ cùng chủ đề): `curl -sS "<processed_url>?job_id=<job_id>&token=<notify_token>"` → `items`.
 
@@ -34,7 +34,14 @@ Gặp trang đăng nhập của app hoặc Google: dừng, báo `failed`: "Chrom
    - Bấm nút dựng (vd "AI dựng video"). Đợi tới khi việc xuất hiện trong "Tiến trình dựng video" hoặc "Video của tôi", rồi mới làm video tiếp theo (mở lại "Tạo video" nếu form bị xóa).
    - Không bấm nút nào mở hộp thoại alert/confirm của trình duyệt.
    - Nếu app có nút tạo nhiều video cùng lúc cho chế độ này thì vẫn phải bảo đảm mỗi video một kịch bản khác nhau.
-4. **Chờ dựng xong.** Lặp: chạy `sleep 180` (đặt timeout lệnh 240000 ms), rồi mở "Video của tôi" kiểm tra trạng thái từng video vừa tạo. Xong khi mọi video đều ở **Chờ duyệt** (hoặc Lỗi). Tối đa 3 giờ. Nếu lỗi do nội dung (kịch bản quá ngắn/dài) thì sửa kịch bản và tạo lại 1 lần; lỗi khác (vd lồng tiếng) thì bấm "Thử làm lại" 1 lần.
-   Ghi tiêu đề và góc từng video trong tin `running` kèm `processed`.
-5. Báo `done` theo đúng mẫu ngắn ở trên.
+4. Gửi `running` kèm `processed` (tiêu đề và góc từng video).
+5. **Giao lại cho bot theo dõi**: báo `rendering` kèm `watch` như mục bên dưới, rồi kết thúc phiên.
 6. Nếu không tìm thấy mục "Đồ họa giải thích" hoặc form khác hẳn mô tả: báo `failed`, mô tả ngắn form đang thấy để em sửa hướng dẫn.
+
+## Giao lại cho bot theo dõi (bắt buộc, KHÔNG tự ngồi chờ dựng xong)
+App dựng trên VPS khác, mất nhiều phút đến vài giờ. Bạn không chờ: khi mọi video đã được đưa vào dựng, báo `rendering` rồi **kết thúc phiên ngay** (không báo `done`). Bot sẽ tự mở phiên kiểm tra ngắn vài phút một lần và báo anh khi video vào Chờ duyệt.
+```
+curl -sS -X POST "<notify_url>" -H 'Content-Type: application/json' \
+  -d '{"job_id":"<job_id>","token":"<notify_token>","status":"rendering","message":"đã đưa N video vào dựng","watch":[{"name":"<tên/tiêu đề video đúng như hiện trong Video của tôi>","created":"<giờ tạo nếu app hiện>","source":"<tên file nguồn hoặc góc kịch bản>"}]}'
+```
+`watch` liệt kê đúng các video đã đưa vào dựng thành công, đủ thông tin để phiên kiểm tra sau tìm lại được chúng trong "Video của tôi".

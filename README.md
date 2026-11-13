@@ -28,7 +28,7 @@ Zalo ──webhook──> VPS
 | `/chedo tudong` / `luon` / `nhanh` | Lúc nào chạy đủ 3 AI |
 
 - Chỉ Zalo id trong `ALLOWED_ZALO_IDS` ra lệnh được.
-- Các việc chạy lần lượt vì dùng chung 1 Chrome. Đang có việc edit trà thì lệnh edit trà mới bị từ chối (tránh chọn trùng video); thêm chữ "vẫn chạy" để xếp hàng sau.
+- Các việc chạy lần lượt vì dùng chung 1 Chrome. Việc dựng video chạy trên VPS của app: Claude bấm dựng xong là báo `rendering` kèm danh sách video rồi thoát, Chrome rảnh cho việc khác. Bot (`src/watcher.js`) tự mở phiên kiểm tra ngắn (`prompts/check-videos.md`) mỗi `VIDEO_CHECK_MIN` phút (mặc định 10) và nhắn anh khi video vào Chờ duyệt (tối đa 5 giờ với video trà, 3 giờ với đồ họa). Đang có việc edit trà thì lệnh edit trà mới bị từ chối (tránh chọn trùng video); thêm chữ "vẫn chạy" để xếp hàng sau.
 - Video đã dựng được lưu ở `data/processed.json` (nạp sẵn 8 video của 2 đợt trước), lần sau tự bỏ qua.
 
 ## Trợ lí 3 AI

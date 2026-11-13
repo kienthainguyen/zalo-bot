@@ -19,7 +19,7 @@ curl -sS -X POST "<notify_url>" -H 'Content-Type: application/json' \
 - `status`: `running` (đang làm), `done` (xong), `failed` (lỗi, cần anh xử lý).
 - `message` tiếng Việt, ngắn. Báo khi: đã chọn xong video (liệt kê tên file kèm thời lượng, vd "IMG_1234.MOV 1:05"), và khi kết thúc. 
 - Khi đã bấm dựng, gửi kèm `"processed":[{"filename":"IMG_xxxx.MOV","taken":"yyyy-mm-dd HH:MM","duration":"m:ss","note":"mô tả ngắn"}]` cho các video đã đưa vào dựng.
-- **Luôn** kết thúc bằng một lần báo `done` hoặc `failed`.
+- **Luôn** kết thúc bằng một lần báo `rendering` (đã đưa video vào dựng) hoặc `failed`.
 
 Danh sách video đã dựng hoặc cần bỏ qua: `curl -sS "<processed_url>?job_id=<job_id>&token=<notify_token>"` → `items`. Không chọn lại video nào trong danh sách (so theo ngày giờ quay và tên file).
 
@@ -46,6 +46,12 @@ Nếu gặp trang đăng nhập Google (accounts.google.com) hoặc trang đăng
    - Dừng thay thế sau tối đa 2 vòng; nếu vẫn thiếu thì báo rõ còn thiếu bao nhiêu video.
    - Chỉ video có N ≥ 70 từ mới tính là đã dựng thành công.
    Báo `running` kèm `processed` (cả video đạt và video bị loại) và ghi chú số từ.
-4. **Chờ dựng xong.** Mỗi video dựng khoảng 5–17 phút và xếp hàng. Lặp: chạy `sleep 240` (đặt timeout lệnh 300000 ms), rồi mở "Video của tôi" kiểm tra trạng thái từng video vừa dựng. Xong khi mọi video đạt đều ở **Chờ duyệt** (hoặc Lỗi). Tối đa 5 giờ.
-   - Video chuyển sang Lỗi: bấm "Thử làm lại" 1 lần; vẫn lỗi thì tính là video lỗi.
-5. Báo `done` theo đúng mẫu ngắn ở trên. Nếu không tìm đủ video mới phù hợp thì thêm 1 câu: "Em chỉ tìm được N video phù hợp."
+4. **Giao lại cho bot theo dõi**: báo `rendering` kèm `watch` như mục bên dưới, rồi kết thúc phiên. Nếu không tìm đủ video mới phù hợp thì ghi trong `message`: "Em chỉ tìm được N video phù hợp." (bot sẽ thêm câu này vào tin xong).
+
+## Giao lại cho bot theo dõi (bắt buộc, KHÔNG tự ngồi chờ dựng xong)
+App dựng trên VPS khác, mất nhiều phút đến vài giờ. Bạn không chờ: khi mọi video đã được đưa vào dựng và đã qua bước kiểm tra lượng lời nói, báo `rendering` rồi **kết thúc phiên ngay** (không báo `done`). Bot sẽ tự mở phiên kiểm tra ngắn vài phút một lần và báo anh khi video vào Chờ duyệt.
+```
+curl -sS -X POST "<notify_url>" -H 'Content-Type: application/json' \
+  -d '{"job_id":"<job_id>","token":"<notify_token>","status":"rendering","message":"đã đưa N video vào dựng","watch":[{"name":"<tên/tiêu đề video đúng như hiện trong Video của tôi>","created":"<giờ tạo nếu app hiện>","source":"<tên file nguồn hoặc góc kịch bản>"}]}'
+```
+`watch` liệt kê đúng các video đã đưa vào dựng thành công, đủ thông tin để phiên kiểm tra sau tìm lại được chúng trong "Video của tôi".

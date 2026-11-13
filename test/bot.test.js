@@ -24,6 +24,9 @@ const { jobToken } = await import('../src/notify.js');
 const editTea = (await import('../src/workflows/edit-tea.js')).default;
 const explainerMod = await import('../src/workflows/explainer.js');
 const explainer = explainerMod.default;
+const { checkDue } = await import('../src/watcher.js');
+const { getJob } = await import('../src/jobs.js');
+const FAR = () => Date.now() + 3600_000;
 
 const realFetch = globalThis.fetch;
 const sent = [];
@@ -123,7 +126,22 @@ test('edit 10 video trà: chạy Claude trên VPS, chặn trùng, nhận báo k�
   await zalo('edit 5 video trà');
   assert.match(lastText(), /chưa xong/);
 
+  // Claude bấm dựng xong thì thoát (Chrome rảnh), bot không nhắn gì thêm.
+  await until(() => getJob(payload.job_id).status === 'rendering');
+  assert.equal(getJob(payload.job_id).watch.length, 10);
+  assert.match(lastText(), /chưa xong/);
+  // Đang dựng trên app thì vẫn nhận lệnh dựng mới.
+  checkDue(Date.now()); // chưa tới giờ kiểm tra
+  await sleep(100);
+  assert.equal(runs().length, 1);
+  // Tới giờ: bot mở phiên kiểm tra ngắn, video đã vào Chờ duyệt thì báo anh.
+  checkDue(FAR());
   await until(() => /Chờ duyệt/.test(lastText() || ''));
+  const check = runs()[1].payload;
+  assert.equal(check.job_id, payload.job_id);
+  assert.equal(check.watch.length, 10);
+  assert.equal(check.final, false);
+  assert.equal(getJob(payload.job_id).status, 'done');
   assert.equal(lastText(), '10 video đã xong, hiện nằm trong phần Chờ duyệt, anh vào kiểm tra ạ.');
   assert.ok(!sent.some((m) => /chỉ ghi log/.test(m.text)), 'tin running không được gửi lên Zalo');
   await zalo('trạng thái');
@@ -158,7 +176,9 @@ test('đồ họa: chạy Claude với chủ đề và prompt riêng', async () 
   assert.equal(payload.workflow, 'explainer');
   assert.equal(payload.topic, 'AI chốt sale tự động');
   assert.equal(payload.count, 3);
-  await until(() => /Chờ duyệt/.test(lastText() || ''));
+  await until(() => getJob(payload.job_id).status === 'rendering');
+  checkDue(FAR());
+  await until(() => /^3 video đã xong/.test(lastText() || ''));
 });
 
 test('hướng dẫn liệt kê cả luồng đồ họa', async () => {
@@ -173,4 +193,18 @@ test('tin thường chuyển cho Trợ lí 3 AI (chưa có khoá thì báo cần
   await zalo('lập kế hoạch dựng video trà tuần sau');
   assert.match(lastText(), /ANTHROPIC_API_KEY/);
   assert.equal(runs().length, before, 'không được chạy luồng dựng video');
+});
+
+test('phiên kiểm tra thoát không báo gì: thử lại sau, không nhắn anh', async () => {
+  await zalo('edit 1 video trà');
+  await until(() => runs().at(-1)?.payload.count === 1);
+  const id = runs().at(-1).payload.job_id;
+  await until(() => getJob(id).status === 'rendering');
+  const n = sent.length;
+  process.env.FAKE_CLAUDE_MODE = 'silent';
+  checkDue(FAR());
+  await until(() => getJob(id).checkFailures === 1 && getJob(id).status === 'rendering');
+  delete process.env.FAKE_CLAUDE_MODE;
+  assert.equal(sent.length, n);
+  assert.ok(getJob(id).nextCheckAt > Date.now());
 });
