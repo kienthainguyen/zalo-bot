@@ -3,14 +3,16 @@ import { config } from '../config.js';
 import * as store from './store.js';
 import { handleMessage, makeReport, needsCouncil } from './brain.js';
 
-export const ASSISTANT_HELP = `Trợ lí AI (Claude làm, GPT phản biện): anh cứ nhắn bình thường, ví dụ
-- "Thứ 6 nộp báo cáo quý cho sếp"
-- "Xong việc gọi khách hàng A rồi"
-- "Lập kế hoạch mở chi nhánh mới trong 3 tháng"
-- "3h chiều nay nhắc anh gọi khách A"
-- Gửi ảnh (hoá đơn, sản phẩm, màn hình lỗi...) kèm yêu cầu, hoặc gửi link để em đọc, tóm tắt
-- Gửi nhiều tin liên tiếp: em đợi anh gửi xong, gom lại rồi mới làm. Đang làm mà muốn dừng, sửa hay thêm ý thì anh cứ nhắn
-- "Tạo cho anh 1 fanpage Facebook mới tên Trà Kiên Thái Nguyên" (em tự làm trên VPS, chỉ nhắn anh khi cần anh đăng nhập, xác minh, thanh toán)
+export const ASSISTANT_HELP = `Trợ lí AI (Claude làm, GPT phản biện). Anh cứ nhắn bình thường, em làm được:
+- Đọc ảnh anh gửi (hoá đơn, sản phẩm, màn hình lỗi...), kèm chú thích hoặc tin nhắn yêu cầu đi theo.
+- Đọc link: trang web thường thì em đọc và tóm tắt luôn. Link Drive, Facebook, YouTube thì em mở bằng Chrome của VPS.
+- Gom tin: anh gửi liên tiếp nhiều tin, em đợi anh ngừng khoảng 10 giây rồi đọc hết, tổng hợp xong mới làm.
+- Đang làm anh vẫn nhắn được để thêm ý, sửa ý, hoặc "dừng việc đó".
+- Hẹn giờ nhắc, vd "3h chiều nhắc anh gọi khách A", tới giờ em tự nhắn ⏰.
+- Ra lệnh dựng video bằng lời tự nhiên, không cần đúng câu lệnh.
+- Ghi việc, kế hoạch, báo cáo, vd "Thứ 6 nộp báo cáo quý cho sếp", "Lập kế hoạch mở chi nhánh mới trong 3 tháng".
+- Làm thay anh trên VPS, vd "Tạo cho anh 1 fanpage Facebook mới tên Trà Kiên Thái Nguyên". Em chỉ nhắn anh khi cần anh đăng nhập, xác minh, thanh toán.
+Giọng nói, video, file: Zalo chưa chuyển cho bot, anh nói thành chữ bằng micro bàn phím hoặc gửi link.
 Việc phân tích, kế hoạch, đề xuất, báo cáo, hoặc có chữ "kỹ" sẽ có GPT phản biện.
 Lệnh nhanh:
 /viec - việc chưa xong
