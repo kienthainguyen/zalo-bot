@@ -40,7 +40,8 @@ Tin nhắn không phải lệnh video được giao cho trợ lí (`src/assistan
 - **Tự gửi Zalo** (giờ VN): 7h hằng ngày nhắc việc; 8h thứ Hai báo cáo tuần; 8h ngày 1 báo cáo tháng trước. Báo cáo tuần/tháng cũng qua GPT + Gemini. Gửi tới người đầu tiên trong `ALLOWED_ZALO_IDS`.
 - **Việc thực thi** (`src/assistant/tasks.js`, prompt `prompts/general.md`): khi việc cần thao tác thật, Claude gọi công cụ `start_task` → bot chạy Claude Code trên VPS (Chrome, Bash, tìm kiếm web). Nó tự quyết các chi tiết, chỉ gửi câu hỏi (`status: "ask"`) khi cần anh đăng nhập, nhập OTP, giải CAPTCHA, thanh toán. Anh trả lời bình thường trên Zalo, trợ lí chuyển lời qua `answer_task`, Claude Code đọc ở `GET /api/inbox`. Chờ anh tối đa 120 phút. Các việc trên VPS chạy lần lượt vì dùng chung 1 Chrome.
 - Câu có dấu hiệu trò chuyện (kế hoạch, báo cáo, xong, câu hỏi...) không chạy luồng video, kể cả khi có chữ "video trà".
-- Đăng nhập gói (1 lần): `sudo -u zalobot -H codex login --device-auth` (ChatGPT) và `sudo -u zalobot -H env NO_BROWSER=true gemini` (chọn Login with Google, rồi `/quit`). Claude dùng lại đăng nhập Claude Code sẵn có.
+- **Gemini (2026-11-13):** Google không còn cho đăng nhập Gemini CLI bằng tài khoản cá nhân, nên mặc định bỏ bước trọng tài: GPT phản biện, Claude tự cân nhắc và chỉ sửa ý đúng. Có `GEMINI_API_KEY` (hoặc `GEMINI_CLI=1`) thì Gemini làm trọng tài lại.
+- Đăng nhập gói (1 lần): `sudo -u zalobot -H codex login --device-auth` (ChatGPT). Claude dùng lại đăng nhập Claude Code sẵn có.
 
 ## Cần chuẩn bị
 - VPS Ubuntu 22.04/24.04, tối thiểu **2 CPU, 4 GB RAM**, 30 GB ổ cứng.

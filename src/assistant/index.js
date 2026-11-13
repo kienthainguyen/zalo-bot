@@ -3,24 +3,24 @@ import { config } from '../config.js';
 import * as store from './store.js';
 import { handleMessage, makeReport, needsCouncil } from './brain.js';
 
-export const ASSISTANT_HELP = `Trợ lí 3 AI (Claude làm, GPT phản biện, Gemini trọng tài): anh cứ nhắn bình thường, ví dụ
+export const ASSISTANT_HELP = `Trợ lí AI (Claude làm, GPT phản biện): anh cứ nhắn bình thường, ví dụ
 - "Thứ 6 nộp báo cáo quý cho sếp"
 - "Xong việc gọi khách hàng A rồi"
 - "Lập kế hoạch mở chi nhánh mới trong 3 tháng"
 - "Tạo cho anh 1 fanpage Facebook mới tên Trà Kiên Thái Nguyên" (em tự làm trên VPS, chỉ nhắn anh khi cần anh đăng nhập, xác minh, thanh toán)
-Việc phân tích, kế hoạch, đề xuất, báo cáo, hoặc có chữ "kỹ" sẽ chạy đủ 3 AI.
+Việc phân tích, kế hoạch, đề xuất, báo cáo, hoặc có chữ "kỹ" sẽ có GPT phản biện.
 Lệnh nhanh:
 /viec - việc chưa xong
 /xong 12 - đánh dấu việc #12 đã xong
 /baocao ngay | tuan | thang - báo cáo ngay
 /nho - xem những điều em ghi nhớ
-/chedo tudong | luon | nhanh - lúc nào chạy đủ 3 AI
+/chedo tudong | luon | nhanh - lúc nào có GPT phản biện
 Tự động: 7h sáng nhắc việc, 8h thứ Hai báo cáo tuần, 8h ngày 1 báo cáo tháng.`;
 
 const MODES = { tudong: 'auto', luon: 'always', nhanh: 'fast' };
 const MODE_VI = {
-  auto: 'tự động (việc phân tích, kế hoạch, báo cáo mới chạy đủ 3 AI)',
-  always: 'luôn chạy đủ 3 AI',
+  auto: 'tự động (việc phân tích, kế hoạch, báo cáo mới có GPT phản biện)',
+  always: 'luôn có GPT phản biện',
   fast: 'chỉ Claude, nhanh và rẻ',
 };
 const REPORT_KINDS = { ngay: 'day', tuan: 'week', thang: 'month' };
@@ -88,7 +88,7 @@ export async function askAssistant(text, send, msg = {}) {
     }
     if (!assistantEnabled()) return send(DISABLED);
     const deep = needsCouncil(text);
-    if (deep) await send('Em đang làm, có GPT phản biện và Gemini duyệt, anh chờ em chút nhé.');
+    if (deep) await send('Em đang làm, có GPT phản biện, anh chờ em chút nhé.');
     return send(await enqueue(() => handleMessage(text, { deep, chatId: msg.chatId, userId: msg.userId })));
   } catch (e) {
     console.error('[assistant] lỗi', e);

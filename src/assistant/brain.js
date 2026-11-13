@@ -309,8 +309,13 @@ export async function council(request, draft) {
   if (!critique || critique.toUpperCase().slice(0, 40).includes('KHÔNG CÓ VẤN ĐỀ')) {
     return { text: draft, note: '— Claude soạn, GPT phản biện: không có vấn đề.' };
   }
+  // Không có GEMINI_API_KEY (Google không cho dùng gói AI Pro qua Gemini CLI): bỏ trọng tài,
+  // Claude tự cân nhắc ý phản biện của GPT và chỉ sửa những ý đúng (anh Kiên chọn 2026-11-13).
+  const selfJudge = !config.assistant.geminiKey && !config.assistant.cli.gemini;
   let verdict;
-  try {
+  if (selfJudge) {
+    verdict = { verdict: 'revise', reason: '', instructions: 'Tự cân nhắc các ý phản biện trên, chỉ sửa những ý đúng và đáng sửa; ý sai hoặc không cần thiết thì giữ nguyên.' };
+  } else try {
     verdict = await ai.geminiJson(
       JUDGE_SYSTEM,
       `YÊU CẦU:\n${request}\n\nBẢN TRẢ LỜI CỦA CLAUDE:\n${draft}\n\nPHẢN BIỆN CỦA GPT:\n${critique}`,
@@ -339,6 +344,7 @@ export async function council(request, draft) {
   }
   if (!revised) return { text: draft, note: '— Claude soạn, GPT phản biện; bản sửa bị lỗi nên giữ bản đầu.' };
   const reason = String(verdict.reason || '').trim();
+  if (selfJudge) return { text: revised, note: '— Claude soạn, GPT phản biện, Claude cân nhắc và chỉnh sửa.' };
   return { text: revised, note: `— Claude soạn, GPT phản biện, Gemini yêu cầu chỉnh sửa${reason ? `: ${reason}` : '.'}` };
 }
 

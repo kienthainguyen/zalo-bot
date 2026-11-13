@@ -121,7 +121,7 @@ test('việc quan trọng: GPT phản biện, Gemini bắt sửa, Claude viết 
   };
   script = [text('Kế hoạch bản đầu'), text('Kế hoạch bản sửa có ngân sách')];
   await say('Lập kế hoạch mở chi nhánh mới trong 3 tháng');
-  assert.match(sent[0], /GPT phản biện và Gemini duyệt/);
+  assert.match(sent[0], /có GPT phản biện/);
   assert.equal(
     sent[1],
     'Kế hoạch bản sửa có ngân sách\n\n— Claude soạn, GPT phản biện, Gemini yêu cầu chỉnh sửa: Cần thêm ngân sách và mốc thời gian.',

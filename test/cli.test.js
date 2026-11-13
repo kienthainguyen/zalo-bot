@@ -17,6 +17,7 @@ process.env.CODEX_BIN = process.execPath;
 process.env.CODEX_PRE_ARGS = fake;
 process.env.GEMINI_BIN = process.execPath;
 process.env.GEMINI_PRE_ARGS = fake;
+process.env.GEMINI_CLI = '1';
 process.env.FAKE_AI_LOG = path.join(process.env.DATA_DIR, 'ai.log');
 process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 
@@ -62,4 +63,15 @@ test('công cụ: phiên/token sai bị từ chối', async () => {
     body: JSON.stringify({ session: 'x', token: 'y', name: 'add_task', input: { title: 'hack' } }),
   });
   assert.equal(r.status, 403);
+});
+
+test('mặc định không có Gemini: Claude tự cân nhắc phản biện của GPT', async () => {
+  const { config } = await import('../src/config.js');
+  config.assistant.cli.gemini = false;
+  process.env.FAKE_GPT = '- Thiếu ngân sách';
+  const n = calls().length;
+  await say('đề xuất giá bán mới');
+  assert.equal(sent.at(-1), 'Bản sửa có ngân sách\n\n— Claude soạn, GPT phản biện, Claude cân nhắc và chỉnh sửa.');
+  assert.deepEqual(calls().slice(n).map((c) => c.kind), ['claude', 'codex', 'claude']);
+  config.assistant.cli.gemini = true;
 });

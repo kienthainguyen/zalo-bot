@@ -58,6 +58,8 @@ export const config = {
       geminiBin: process.env.GEMINI_BIN || 'gemini',
       geminiPreArgs: list('GEMINI_PRE_ARGS'),
       geminiModel: process.env.GEMINI_MODEL || '',
+      // Gemini CLI không đăng nhập được bằng tài khoản cá nhân nữa: mặc định tắt. GEMINI_CLI=1 để bật lại.
+      gemini: process.env.GEMINI_CLI === '1',
     },
     // Giờ gửi tự động (giờ Việt Nam)
     dailyHour: Number(process.env.DAILY_BRIEF_HOUR || 7),
