@@ -3,15 +3,28 @@ import { config } from './config.js';
 import { normalize } from './text.js';
 import { workflows } from './workflows/index.js';
 import { createJob, updateJob, recentJobs, activeJobs } from './jobs.js';
+import { ASSISTANT_HELP, askAssistant, isAssistantCommand } from './assistant/index.js';
+import { getSetting, setSetting } from './assistant/store.js';
 
 const STATUS_VI = { queued: 'đang chờ', running: 'đang chạy', done: 'xong', failed: 'lỗi' };
 
 function helpText() {
   const lines = ['Bot Trợ lí ra lệnh nhận các lệnh sau:'];
   for (const w of workflows) lines.push(`• ${w.title}: ví dụ "${w.examples[0]}"`);
-  lines.push('• "trạng thái": xem các việc gần đây');
+  lines.push('• "trạng thái": xem các việc dựng video gần đây');
   lines.push('• "hướng dẫn": xem danh sách lệnh');
+  lines.push('', ASSISTANT_HELP);
   return lines.join('\n');
+}
+
+// Tin có dấu hiệu là trò chuyện / giao việc cho trợ lí (không phải lệnh dựng video), vd
+// "lập kế hoạch dựng video trà tuần sau", "xong việc edit video trà rồi", "dựng video trà mất bao lâu?".
+// Chỉ xét phần đầu câu (trước ngoặc kép, "chủ đề", "về") để chủ đề video đồ họa không bị tính.
+const CHAT_MARKERS =
+  /\b(ke hoach|phan tich|bao cao|de xuat|chien luoc|tong hop|danh gia|so sanh|tu van|giai phap|lo trinh|rui ro|co nen|nen khong|xong|da lam|hom qua|nhac|ghi nho|tai sao|the nao|bao lau|bao nhieu)\b/;
+export function looksLikeChat(n) {
+  const head = n.split(/["“”'‘’«»]|\bchu de\b|\sve\s/)[0];
+  return n.length > 200 || head.includes('?') || CHAT_MARKERS.test(head);
 }
 
 function statusText() {
@@ -40,10 +53,16 @@ export async function handleMessage(msg, send) {
     return send(`Bạn chưa có quyền ra lệnh cho bot này. Zalo id của bạn là ${msg.userId}, gửi id này cho chủ bot để được thêm quyền.`);
   }
 
+  // Nhớ chat của anh để gửi nhắc việc, báo cáo tự động.
+  if (msg.userId === config.allowedUsers[0] && msg.chatId && getSetting('owner_chat_id') !== msg.chatId) {
+    setSetting('owner_chat_id', msg.chatId);
+  }
+
   if (/^(\/)?(help|start|huong dan|lenh|menu|\?)$/.test(n)) return send(helpText());
+  if (isAssistantCommand(msg.text)) return askAssistant(msg.text, send);
   if (/^(\/)?(status|trang thai|tien do)\b/.test(n)) return send(statusText());
 
-  for (const w of workflows) {
+  for (const w of looksLikeChat(n) ? [] : workflows) {
     const params = w.match(msg.text);
     if (!params) continue;
 
@@ -78,5 +97,6 @@ export async function handleMessage(msg, send) {
     }
   }
 
-  return send(`Em chưa hiểu lệnh "${msg.text}".\n\n${helpText()}`);
+  // Không phải lệnh video: giao cho Trợ lí 3 AI.
+  return askAssistant(msg.text, send);
 }

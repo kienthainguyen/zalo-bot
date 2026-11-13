@@ -11,6 +11,8 @@ import { handleMessage } from './router.js';
 import { getJob, updateJob } from './jobs.js';
 import { listProcessed, addProcessed } from './processed.js';
 import { checkJobToken } from './notify.js';
+import { startScheduler } from './assistant/index.js';
+import { getSetting } from './assistant/store.js';
 
 const seen = new Set(); // chống xử lý trùng khi Zalo gửi lại
 
@@ -113,4 +115,9 @@ export function createServer() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   createServer().listen(config.port, config.host, () => console.log(`Bot dang chay o cong ${config.port}`));
+  // Nhắc việc 7h, báo cáo tuần/tháng của Trợ lí 3 AI, gửi tới anh (người đầu tiên trong ALLOWED_ZALO_IDS).
+  startScheduler(async (text) => {
+    const chatId = getSetting('owner_chat_id') || config.allowedUsers[0];
+    if (chatId) await sendMessage(chatId, text);
+  });
 }

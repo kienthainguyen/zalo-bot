@@ -17,6 +17,7 @@ process.env.CLAUDE_PRE_ARGS = new URL('./fake-claude.js', import.meta.url).pathn
 process.env.AGENT_WORKDIR = process.env.DATA_DIR;
 process.env.FAKE_CLAUDE_LOG = path.join(process.env.DATA_DIR, 'fake-claude.log');
 process.env.FAKE_CLAUDE_DELAY = '200';
+process.env.ANTHROPIC_API_KEY = ''; // kiểm thử khi trợ lí 3 AI chưa có khoá
 
 const { createServer } = await import('../src/server.js');
 const { jobToken } = await import('../src/notify.js');
@@ -165,7 +166,11 @@ test('hướng dẫn liệt kê cả luồng đồ họa', async () => {
   assert.match(lastText(), /đồ họa giải thích/);
 });
 
-test('lệnh lạ', async () => {
+test('tin thường chuyển cho Trợ lí 3 AI (chưa có khoá thì báo cần thêm khoá)', async () => {
+  const before = runs().length;
   await zalo('nấu cơm');
-  assert.match(lastText(), /chưa hiểu/);
+  assert.match(lastText(), /ANTHROPIC_API_KEY/);
+  await zalo('lập kế hoạch dựng video trà tuần sau');
+  assert.match(lastText(), /ANTHROPIC_API_KEY/);
+  assert.equal(runs().length, before, 'không được chạy luồng dựng video');
 });

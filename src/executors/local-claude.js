@@ -8,6 +8,15 @@ import { config } from '../config.js';
 import { getJob, updateJob } from '../jobs.js';
 import { sendMessage } from '../zalo.js';
 
+// Claude Code trên VPS dùng tài khoản Claude đã đăng nhập (gói của anh). Không để nó thấy các khoá API
+// của Trợ lí 3 AI, nếu không nó sẽ chuyển sang tính tiền theo API key.
+const HIDDEN_ENV = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY', 'GEMINI_API_KEY'];
+export function agentEnv(env = process.env) {
+  const out = { ...env };
+  for (const k of HIDDEN_ENV) delete out[k];
+  return out;
+}
+
 const queue = [];
 let running = null;
 
@@ -47,7 +56,7 @@ function next() {
 
   const child = spawn(config.agent.claudeBin, args, {
     cwd: config.agent.workDir,
-    env: process.env,
+    env: agentEnv(),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const keep = (d) => {

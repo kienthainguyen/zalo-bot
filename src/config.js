@@ -36,4 +36,19 @@ export const config = {
     model: process.env.AGENT_MODEL || '',
     timeoutMin: Number(process.env.AGENT_TIMEOUT_MIN || 360), // gồm cả thời gian chờ app dựng xong
   },
+
+  // Trợ lí 3 AI: Claude làm, GPT phản biện, Gemini trọng tài.
+  assistant: {
+    anthropicKey: process.env.ANTHROPIC_API_KEY || '',
+    openaiKey: process.env.OPENAI_API_KEY || '',
+    geminiKey: process.env.GEMINI_API_KEY || '',
+    claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-5-5',
+    openaiModel: process.env.OPENAI_MODEL || 'gpt-5',
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
+    webSearch: (process.env.ASSISTANT_WEB_SEARCH || '1') === '1',
+    // Giờ gửi tự động (giờ Việt Nam)
+    dailyHour: Number(process.env.DAILY_BRIEF_HOUR || 7),
+    weeklyHour: Number(process.env.WEEKLY_REPORT_HOUR || 8),
+    monthlyHour: Number(process.env.MONTHLY_REPORT_HOUR || 8),
+  },
 };

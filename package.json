@@ -11,5 +11,8 @@
     "start": "node --env-file-if-exists=.env src/server.js",
     "test": "node --test test/*.test.js",
     "set-webhook": "node --env-file-if-exists=.env scripts/set-webhook.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0"
   }
 }

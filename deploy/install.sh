@@ -38,6 +38,7 @@ if [ ! -f "$APP/.env" ]; then
   sed -i "s#^VNC_URL=.*#VNC_URL=https://$DOMAIN/vnc/vnc.html?path=vnc/websockify\&autoconnect=1\&resize=remote#" "$APP/.env"
 fi
 chown -R zalobot:zalobot "$APP" && chmod 600 "$APP/.env"
+(cd "$APP" && sudo -u zalobot npm install --omit=dev)
 
 echo "== Dịch vụ"
 cp "$APP"/deploy/systemd/*.service /etc/systemd/system/
