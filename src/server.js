@@ -11,7 +11,9 @@ import { handleMessage } from './router.js';
 import { getJob, updateJob } from './jobs.js';
 import { listProcessed, addProcessed } from './processed.js';
 import { checkJobToken } from './notify.js';
-import { startScheduler } from './assistant/index.js';
+import { startScheduler, assistantBusy } from './assistant/index.js';
+import { queueInfo } from './executors/local-claude.js';
+import { pendingBatches } from './inbox.js';
 import { getSetting, addMessage } from './assistant/store.js';
 import { AGENT_TASK, takeInbox } from './assistant/tasks.js';
 import { markRendering, startWatcher } from './watcher.js';
@@ -136,6 +138,11 @@ export function createServer() {
       if (req.method === 'GET' && url.pathname === '/api/inbox') return onInbox(url, res);
       if (req.method === 'POST' && url.pathname === '/api/assistant/tool') return await onAssistantTool(req, res);
       if (req.method === 'GET' && url.pathname === '/health') return reply(res, 200, { ok: true });
+      // Tự cập nhật (deploy/autoupdate.sh) hỏi bot có đang bận không, để không khởi động lại giữa chừng.
+      if (req.method === 'GET' && url.pathname === '/api/busy') {
+        const q = queueInfo();
+        return reply(res, 200, { busy: Boolean(q.running || q.waiting.length || assistantBusy() || pendingBatches()), ...q });
+      }
       reply(res, 404, { message: 'not found' });
     } catch (e) {
       console.error('[http]', e);

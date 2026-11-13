@@ -1,0 +1,7 @@
+[Unit]
+Description=Tu cap nhat Bot Tro li ra lenh tu GitHub
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/zalo-bot/deploy/autoupdate.sh

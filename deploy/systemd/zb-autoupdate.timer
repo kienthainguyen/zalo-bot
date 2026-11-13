@@ -1,0 +1,7 @@
+[Unit]
+Description=Kiem tra ban moi cua bot moi 2 phut
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+[Install]
+WantedBy=timers.target

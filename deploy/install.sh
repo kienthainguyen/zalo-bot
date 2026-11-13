@@ -41,9 +41,9 @@ chown -R zalobot:zalobot "$APP" && chmod 600 "$APP/.env"
 (cd "$APP" && sudo -u zalobot npm install --omit=dev)
 
 echo "== Dịch vụ"
-cp "$APP"/deploy/systemd/*.service /etc/systemd/system/
+cp "$APP"/deploy/systemd/*.service "$APP"/deploy/systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now zb-xvfb zb-desktop zb-chrome zb-vnc zb-novnc zalo-bot
+systemctl enable --now zb-xvfb zb-desktop zb-chrome zb-vnc zb-novnc zalo-bot zb-autoupdate.timer
 
 echo "== HTTPS + mật khẩu trang noVNC"
 VNC_PASS="$(openssl rand -base64 12)"

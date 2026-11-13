@@ -69,9 +69,13 @@ Tin nhắn không phải lệnh video được giao cho trợ lí (`src/assistan
 8. Nhắn thử: `Edit cho a 2 video mới về trà`.
 
 ## Cập nhật bản mới
+**Tự động**: `zb-autoupdate.timer` chạy `deploy/autoupdate.sh` mỗi 2 phút: có commit mới trên `main` thì kéo về, `npm install`, chạy `npm test`; đạt thì khởi động lại bot, hỏng thì quay lại bản cũ. Bot đang bận (Claude đang làm việc, trợ lí đang trả lời, đang gom tin) thì đợi lần sau, tối đa 3 giờ. Xem nhật ký: `journalctl -u zb-autoupdate -n 30 --no-pager`.
+
+Bật lần đầu trên VPS cũ (cài trước khi có tính năng này):
 ```bash
-cd /opt/zalo-bot && sudo -u zalobot git pull && sudo -u zalobot npm install --omit=dev && systemctl restart zalo-bot
+cd /opt/zalo-bot && sudo -u zalobot git pull && cp deploy/systemd/zb-autoupdate.* /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now zb-autoupdate.timer
 ```
+Cập nhật tay (nếu cần): `cd /opt/zalo-bot && sudo -u zalobot git pull && sudo -u zalobot npm install --omit=dev && systemctl restart zalo-bot`
 
 ## Vận hành
 - Log bot: `journalctl -u zalo-bot -f`. Log từng lần Claude chạy: `/opt/zalo-bot/data/logs/<mã việc>.log`.

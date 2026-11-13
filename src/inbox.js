@@ -90,3 +90,5 @@ export function combine(items) {
   const text = items.length > 1 ? `Anh gửi ${items.length} tin liên tiếp:\n${lines.join('\n')}` : lines[0];
   return { text, images };
 }
+
+export const pendingBatches = () => pending.size;

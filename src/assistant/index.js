@@ -34,11 +34,14 @@ const DISABLED = 'Trợ lí 3 AI đang tắt (ASSISTANT_ENABLED=0 trong .env).';
 
 // Chạy lần lượt từng việc của trợ lí (tin nhắn, báo cáo) để lịch sử không bị xen nhau.
 let chain = Promise.resolve();
+let inFlight = 0;
 function enqueue(fn) {
-  const p = chain.then(fn, fn);
+  inFlight++;
+  const p = chain.then(fn, fn).finally(() => inFlight--);
   chain = p.catch(() => {});
   return p;
 }
+export const assistantBusy = () => inFlight > 0;
 
 const ASSISTANT_COMMANDS = ['viec', 'xong', 'baocao', 'nho', 'chedo'];
 export function isAssistantCommand(text) {
