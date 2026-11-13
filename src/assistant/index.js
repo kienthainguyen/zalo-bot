@@ -25,9 +25,9 @@ const MODE_VI = {
 };
 const REPORT_KINDS = { ngay: 'day', tuan: 'week', thang: 'month' };
 
-export const assistantEnabled = () => Boolean(config.assistant.anthropicKey);
-const DISABLED =
-  'Trợ lí 3 AI chưa bật: VPS chưa có ANTHROPIC_API_KEY trong file .env. Anh thêm khoá rồi khởi động lại bot nhé.';
+// Dùng gói đăng ký qua công cụ dòng lệnh nên luôn bật. ASSISTANT_ENABLED=0 để tắt.
+export const assistantEnabled = () => process.env.ASSISTANT_ENABLED !== '0';
+const DISABLED = 'Trợ lí 3 AI đang tắt (ASSISTANT_ENABLED=0 trong .env).';
 
 // Chạy lần lượt từng việc của trợ lí (tin nhắn, báo cáo) để lịch sử không bị xen nhau.
 let chain = Promise.resolve();
@@ -122,7 +122,7 @@ export async function runDueReports(sendToOwner) {
 
 export function startScheduler(sendToOwner, everyMs = 60 * 1000) {
   if (!assistantEnabled()) {
-    console.log('[assistant] Chưa có ANTHROPIC_API_KEY, tắt lịch báo cáo tự động.');
+    console.log('[assistant] Trợ lí đang tắt, không chạy lịch báo cáo.');
     return null;
   }
   let busy = false;

@@ -15,6 +15,7 @@ import { startScheduler } from './assistant/index.js';
 import { getSetting, addMessage } from './assistant/store.js';
 import { AGENT_TASK, takeInbox } from './assistant/tasks.js';
 import { markRendering, startWatcher } from './watcher.js';
+import { runSessionTool } from './assistant/brain.js';
 
 const seen = new Set(); // chống xử lý trùng khi Zalo gửi lại
 
@@ -104,6 +105,13 @@ async function onNotify(req, res) {
 }
 
 // Phiên Claude lấy danh sách video đã dựng để bỏ qua: GET /api/processed?job_id=..&token=..
+// Claude Code của trợ lí gọi công cụ (tạo việc, ghi nhớ, giao việc...): POST /api/assistant/tool
+async function onAssistantTool(req, res) {
+  const result = runSessionTool(await readJson(req));
+  if (result == null) return reply(res, 403, { message: 'forbidden' });
+  reply(res, 200, { result });
+}
+
 // Việc thực thi đọc câu trả lời của anh: GET /api/inbox?job_id=..&token=..
 function onInbox(url, res) {
   const jobId = url.searchParams.get('job_id');
@@ -126,6 +134,7 @@ export function createServer() {
       if (req.method === 'POST' && url.pathname === '/api/notify') return await onNotify(req, res);
       if (req.method === 'GET' && url.pathname === '/api/processed') return onProcessed(url, res);
       if (req.method === 'GET' && url.pathname === '/api/inbox') return onInbox(url, res);
+      if (req.method === 'POST' && url.pathname === '/api/assistant/tool') return await onAssistantTool(req, res);
       if (req.method === 'GET' && url.pathname === '/health') return reply(res, 200, { ok: true });
       reply(res, 404, { message: 'not found' });
     } catch (e) {

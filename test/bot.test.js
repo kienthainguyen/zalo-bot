@@ -17,7 +17,7 @@ process.env.CLAUDE_PRE_ARGS = new URL('./fake-claude.js', import.meta.url).pathn
 process.env.AGENT_WORKDIR = process.env.DATA_DIR;
 process.env.FAKE_CLAUDE_LOG = path.join(process.env.DATA_DIR, 'fake-claude.log');
 process.env.FAKE_CLAUDE_DELAY = '200';
-process.env.ANTHROPIC_API_KEY = ''; // kiểm thử khi trợ lí 3 AI chưa có khoá
+process.env.ANTHROPIC_API_KEY = '';
 
 const { createServer } = await import('../src/server.js');
 const { jobToken } = await import('../src/notify.js');
@@ -27,6 +27,8 @@ const explainer = explainerMod.default;
 const { checkDue } = await import('../src/watcher.js');
 const { getJob } = await import('../src/jobs.js');
 const FAR = () => Date.now() + 3600_000;
+const { ai } = await import('../src/assistant/ai.js');
+ai.claudeAgent = async () => 'Dạ trợ lí trả lời.';
 
 const realFetch = globalThis.fetch;
 const sent = [];
@@ -186,12 +188,13 @@ test('hướng dẫn liệt kê cả luồng đồ họa', async () => {
   assert.match(lastText(), /đồ họa giải thích/);
 });
 
-test('tin thường chuyển cho Trợ lí 3 AI (chưa có khoá thì báo cần thêm khoá)', async () => {
+test('tin thường chuyển cho Trợ lí 3 AI, không chạy nhầm luồng video', async () => {
   const before = runs().length;
   await zalo('nấu cơm');
-  assert.match(lastText(), /ANTHROPIC_API_KEY/);
-  await zalo('lập kế hoạch dựng video trà tuần sau');
-  assert.match(lastText(), /ANTHROPIC_API_KEY/);
+  await until(() => lastText() === 'Dạ trợ lí trả lời.');
+  sent.length = 0;
+  await zalo('xong việc dựng video trà rồi');
+  await until(() => lastText() === 'Dạ trợ lí trả lời.');
   assert.equal(runs().length, before, 'không được chạy luồng dựng video');
 });
 

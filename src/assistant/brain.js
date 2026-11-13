@@ -3,6 +3,7 @@ import { ai, claudeTextOf } from './ai.js';
 import { config } from '../config.js';
 import * as store from './store.js';
 import { startAgentTask, answerAgentTask, activeAgentTasks } from './tasks.js';
+import crypto from 'node:crypto';
 
 const PLAIN_TEXT_RULE =
   "Tin nhắn gửi qua Zalo nên KHÔNG dùng Markdown (không dùng **, #, bảng). " +
@@ -222,8 +223,50 @@ export function toPlain(text) {
     .trim();
 }
 
+// ---------- Claude Code (gói Claude Max) gọi công cụ bằng curl về bot ----------
+const sessions = new Map(); // phiên đang chạy -> ctx
+const sessionToken = (id) => crypto.createHmac('sha256', config.notifySecret || 'local').update('assistant:' + id).digest('hex').slice(0, 32);
+
+// Gọi từ POST /api/assistant/tool. Trả null nếu phiên/token sai.
+export function runSessionTool({ session, token, name, input }) {
+  const ctx = sessions.get(session);
+  if (!ctx || typeof token !== 'string' || token !== sessionToken(session)) return null;
+  return runTool(String(name), input && typeof input === 'object' ? input : {}, ctx);
+}
+
+function toolGuide(session) {
+  const url = `http://127.0.0.1:${config.port}/api/assistant/tool`;
+  const list = TOOLS.map((t) => `- ${t.name}: ${t.description}\n  input: ${JSON.stringify(t.input_schema.properties)}` + (t.input_schema.required ? ` (bắt buộc: ${t.input_schema.required.join(', ')})` : '')).join('\n');
+  return `## Công cụ của trợ lí
+Gọi bằng curl (mỗi lần 1 công cụ, kết quả trả về dạng {"result": "..."}):
+curl -sS -X POST ${url} -H 'Content-Type: application/json' --data-binary @- <<'JSON'
+{"session":"${session}","token":"${sessionToken(session)}","name":"<tên công cụ>","input":{...}}
+JSON
+
+${list}
+Tìm thông tin mới trên mạng: dùng WebSearch / WebFetch.
+Câu trả lời cuối cùng của bạn chính là tin nhắn gửi anh trên Zalo: chỉ viết nội dung tin nhắn, không nhắc tới curl, công cụ, phiên.`;
+}
+
+async function runWorkerCli(ctx) {
+  const session = crypto.randomUUID();
+  sessions.set(session, ctx);
+  try {
+    const history = store
+      .recentMessages(16)
+      .map((m) => `${m.role === 'user' ? 'Anh' : 'Em'}: ${m.content}`)
+      .join('\n\n');
+    const prompt = `${contextBlock()}\n\n## Cuộc trò chuyện gần đây (tin cuối là tin mới của anh, cần trả lời)\n${history}`;
+    return await ai.claudeAgent(`${WORKER_SYSTEM}\n\n${toolGuide(session)}`, prompt, ['Bash(curl:*)', 'WebSearch', 'WebFetch']);
+  } finally {
+    sessions.delete(session);
+  }
+}
+
 // Claude xử lý tin mới nhất (đã lưu trong lịch sử), có dùng công cụ.
+// Không có ANTHROPIC_API_KEY: dùng Claude Code (gói Claude Max). Có khoá: dùng API.
 export async function runWorker({ effort = 'medium', maxSteps = 10, ctx = {} } = {}) {
+  if (!config.assistant.anthropicKey) return (await runWorkerCli(ctx)) || 'Dạ em đã ghi nhận.';
   const messages = historyMessages();
   const system = systemBlocks(WORKER_SYSTEM);
   let text = '';

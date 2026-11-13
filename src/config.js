@@ -49,6 +49,16 @@ export const config = {
     openaiModel: process.env.OPENAI_MODEL || 'gpt-5',
     geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
     webSearch: (process.env.ASSISTANT_WEB_SEARCH || '1') === '1',
+    // Dùng gói đăng ký qua công cụ dòng lệnh (khi không có khoá API tương ứng).
+    cli: {
+      claudeModel: process.env.CLAUDE_MODEL || '', // để trống = mặc định của Claude Code
+      codexBin: process.env.CODEX_BIN || 'codex',
+      codexPreArgs: list('CODEX_PRE_ARGS'), // chỉ dùng khi kiểm thử
+      openaiModel: process.env.OPENAI_MODEL || '',
+      geminiBin: process.env.GEMINI_BIN || 'gemini',
+      geminiPreArgs: list('GEMINI_PRE_ARGS'),
+      geminiModel: process.env.GEMINI_MODEL || '',
+    },
     // Giờ gửi tự động (giờ Việt Nam)
     dailyHour: Number(process.env.DAILY_BRIEF_HOUR || 7),
     weeklyHour: Number(process.env.WEEKLY_REPORT_HOUR || 8),

@@ -23,7 +23,7 @@ if ! command -v google-chrome >/dev/null; then
   curl -fsSL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
   apt-get install -y /tmp/chrome.deb
 fi
-npm install -g @anthropic-ai/claude-code
+npm install -g @anthropic-ai/claude-code @openai/codex @google/gemini-cli
 
 echo "== Người dùng và thư mục"
 id zalobot >/dev/null 2>&1 || useradd -m -s /bin/bash zalobot
@@ -60,4 +60,7 @@ Xong phần cài. Còn lại:
       https://$DOMAIN/vnc/vnc.html?path=vnc/websockify&autoconnect=1&resize=remote
     Tài khoản: admin   Mật khẩu: $VNC_PASS   (ghi lại, chỉ hiện 1 lần)
  4. Đăng ký webhook:    cd $APP && sudo -u zalobot npm run set-webhook
+ 5. Trợ lí 3 AI dùng gói đăng ký, đăng nhập 1 lần:
+      sudo -u zalobot -H codex login --device-auth          (ChatGPT Plus)
+      sudo -u zalobot -H env NO_BROWSER=true gemini         (chọn Login with Google, Google AI Pro; xong gõ /quit)
 MSG
