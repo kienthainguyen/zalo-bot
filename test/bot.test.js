@@ -113,7 +113,7 @@ test('người lạ không ra lệnh được, nhưng hỏi được id', async 
 
 test('hướng dẫn', async () => {
   await zalo('Hướng dẫn');
-  assert.match(lastText(), /Bot Trợ lí ra lệnh/);
+  assert.match(lastText(), /Em nhận các lệnh sau/);
 });
 
 test('edit 10 video trà: chạy Claude trên VPS, chặn trùng, nhận báo kết quả', async () => {
