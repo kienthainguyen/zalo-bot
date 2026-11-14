@@ -11,7 +11,7 @@ import { getSetting, setSetting } from './assistant/store.js';
 const STATUS_VI = { queued: 'đang chờ', running: 'đang chạy', rendering: 'app đang dựng', done: 'xong', failed: 'lỗi', cancelled: 'đã dừng' };
 
 function helpText() {
-  const lines = ['Bot Trợ lí ra lệnh nhận các lệnh sau:'];
+  const lines = ['Em nhận các lệnh sau:'];
   for (const w of workflows) lines.push(`• ${w.title}: ví dụ "${w.examples[0]}"`);
   lines.push('• "trạng thái": xem các việc dựng video gần đây');
   lines.push('• "hướng dẫn": xem danh sách lệnh');

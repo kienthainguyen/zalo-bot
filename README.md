@@ -68,6 +68,14 @@ Tin nhắn không phải lệnh video được giao cho trợ lí (`src/assistan
 7. **Cấp quyền cho anh:** nhắn `id` cho bot trên Zalo → thêm id vào `ALLOWED_ZALO_IDS` trong `.env` → `sudo systemctl restart zalo-bot`.
 8. Nhắn thử: `Edit cho a 2 video mới về trà`.
 
+## Bot Zalo thứ 2 làm trợ lí y hệt
+
+Bot báo cáo của app dựng video (hoặc bất kỳ bot Zalo nào của anh) cũng làm trợ lí y như bot này, dùng chung trí nhớ, danh sách việc, nhắc giờ:
+1. `sudo nano /opt/zalo-bot/.env`, thêm dòng `ZALO_BOT2_TOKEN=<token bot đó>` → `sudo systemctl restart zalo-bot`. Bot tự trỏ webhook của bot đó về đây.
+2. Nhắn `id` cho bot đó. Nếu id khác id cũ, thêm vào `ALLOWED_ZALO_IDS` (cách nhau dấu phẩy) → restart.
+
+Anh nhắn bot nào thì kết quả trả về bot đó. App vẫn gửi báo cáo qua bot đó như cũ (chỉ phần nhận tin chuyển sang đây).
+
 ## Cập nhật bản mới
 **Tự động**: `zb-autoupdate.timer` chạy `deploy/autoupdate.sh` mỗi 2 phút: có commit mới trên `main` thì kéo về, `npm install`, chạy `npm test`; đạt thì khởi động lại bot, hỏng thì quay lại bản cũ. Bot đang bận (Claude đang làm việc, trợ lí đang trả lời, đang gom tin) thì đợi lần sau, tối đa 3 giờ. Xem nhật ký: `journalctl -u zb-autoupdate -n 30 --no-pager`.
 

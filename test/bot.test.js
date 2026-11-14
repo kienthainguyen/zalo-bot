@@ -11,6 +11,7 @@ process.env.AI_WORK_DIR = path.join(process.env.DATA_DIR, 'ai-work');
 process.env.PORT = String(18000 + Math.floor(Math.random() * 1000));
 process.env.ZALO_BOT_TOKEN = '123:test';
 process.env.ZALO_WEBHOOK_SECRET = 'secret-123';
+process.env.ZALO_BOT2_TOKEN = '456:bot2';
 process.env.ALLOWED_ZALO_IDS = 'owner1';
 process.env.NOTIFY_SECRET = 'notify-secret';
 process.env.VNC_URL = 'https://bot.example.com/vnc/';
@@ -39,7 +40,7 @@ let base, server;
 before(async () => {
   globalThis.fetch = async (url, opts = {}) => {
     if (String(url).startsWith('https://bot-api.zaloplatforms.com/')) {
-      if (String(url).endsWith('/sendMessage')) sent.push(JSON.parse(opts.body));
+      if (String(url).endsWith('/sendMessage')) sent.push({ ...JSON.parse(opts.body), bot: String(url).includes('/bot456:bot2/') ? 2 : 1 });
       return new Response(JSON.stringify({ ok: true, result: {} }));
     }
     return realFetch(url, opts);
@@ -55,8 +56,8 @@ const runs = () =>
     ? fs.readFileSync(process.env.FAKE_CLAUDE_LOG, 'utf8').trim().split('\n').map(JSON.parse)
     : [];
 let mid = 0;
-async function zalo(text, userId = 'owner1', secret = 'secret-123') {
-  const res = await realFetch(`${base}/zalo/webhook`, {
+async function zalo(text, userId = 'owner1', secret = 'secret-123', bot = 1) {
+  const res = await realFetch(`${base}/zalo/webhook${bot === 2 ? '?bot=2' : ''}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Bot-Api-Secret-Token': secret },
     body: JSON.stringify({
@@ -224,4 +225,26 @@ test('đọc tin ảnh, sticker, không hỗ trợ từ webhook Zalo', async () 
   assert.equal(parseUpdate({ result: { event_name: 'message.sticker.received', message: { ...base, sticker: 's1' } } }).kind, 'sticker');
   assert.equal(parseUpdate({ result: { event_name: 'message.unsupported.received', message: base } }).kind, 'unsupported');
   assert.equal(parseUpdate({ result: { event_name: 'message.location.received', message: base } }), null);
+});
+
+test('bot thứ 2 làm trợ lí y hệt, trả lời qua đúng bot', async () => {
+  const before = sent.length;
+  await zalo('hướng dẫn', 'owner1', 'secret-123', 2);
+  await until(() => sent.length > before);
+  assert.equal(sent.at(-1).bot, 2);
+  assert.equal(sent.at(-1).chat_id, 'owner1');
+  assert.match(sent.at(-1).text, /Trợ lí AI/);
+
+  const n = sent.length;
+  await zalo('Anh hỏi bot 2 một câu', 'owner1', 'secret-123', 2);
+  await until(() => sent.length > n && sent.at(-1).text === 'Dạ trợ lí trả lời.');
+  assert.equal(sent.at(-1).bot, 2);
+  assert.equal(sent.at(-1).chat_id, 'owner1');
+
+  // Bot 1 vẫn trả lời qua bot 1.
+  const m = sent.length;
+  await zalo('hướng dẫn');
+  await until(() => sent.length > m);
+  assert.equal(sent.at(-1).bot, 1);
+  assert.equal(await zalo('hướng dẫn', 'owner1', 'sai', 2), 403);
 });

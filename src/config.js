@@ -16,6 +16,8 @@ export const config = {
   // Zalo Bot Platform
   zaloToken: process.env.ZALO_BOT_TOKEN || '',
   zaloWebhookSecret: process.env.ZALO_WEBHOOK_SECRET || '',
+  // Bot Zalo thứ 2 (vd bot báo cáo của app dựng video) cũng làm trợ lí y hệt. Để trống = chỉ 1 bot.
+  zaloBot2Token: process.env.ZALO_BOT2_TOKEN || '',
   // Zalo user id được phép ra lệnh. Để trống = chưa ai được phép (bot sẽ báo id cho người nhắn).
   allowedUsers: list('ALLOWED_ZALO_IDS'),
 

@@ -1,12 +1,12 @@
 // Máy chủ HTTP:
-//   POST /zalo/webhook  Zalo gửi tin nhắn tới (kiểm tra header X-Bot-Api-Secret-Token)
+//   POST /zalo/webhook  Zalo gửi tin nhắn tới (kiểm tra header X-Bot-Api-Secret-Token); ?bot=2 là bot thứ 2
 //   POST /api/notify    Phiên Claude báo tiến độ / kết quả: {job_id, token, status?, message, processed?}
 //   GET  /api/processed Phiên Claude lấy danh sách đã làm (để bỏ qua)
 //   GET  /health        Kiểm tra sống
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { config } from './config.js';
-import { parseUpdate, sendMessage, sendTyping } from './zalo.js';
+import { parseUpdate, sendMessage, sendTyping, ensureBot2Webhook } from './zalo.js';
 import { handleMessage } from './router.js';
 import { getJob, updateJob } from './jobs.js';
 import { listProcessed, addProcessed } from './processed.js';
@@ -54,21 +54,23 @@ function safeEqual(a, b) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
-async function onWebhook(req, res) {
+async function onWebhook(req, res, bot) {
+  if (bot === 2 && !config.zaloBot2Token) return reply(res, 404, { message: 'not found' });
   if (!config.zaloWebhookSecret || !safeEqual(req.headers['x-bot-api-secret-token'] || '', config.zaloWebhookSecret)) {
     return reply(res, 403, { message: 'forbidden' });
   }
   const payload = await readJson(req);
   reply(res, 200, { message: 'Success' }); // trả lời Zalo ngay, xử lý sau
 
-  const msg = parseUpdate(payload);
+  const msg = parseUpdate(payload, bot);
   if (!msg || !msg.chatId) return;
   if (msg.messageId) {
-    if (seen.has(msg.messageId)) return;
-    seen.add(msg.messageId);
+    const key = `${bot}:${msg.messageId}`;
+    if (seen.has(key)) return;
+    seen.add(key);
     if (seen.size > 1000) seen.delete(seen.values().next().value);
   }
-  console.log(`[zalo] ${msg.name} (${msg.userId}): ${msg.text}`);
+  console.log(`[zalo${bot === 2 ? ' bot2' : ''}] ${msg.name} (${msg.userId}): ${msg.text}`);
   sendTyping(msg.chatId);
   try {
     await handleMessage(msg, (text) => sendMessage(msg.chatId, text));
@@ -132,7 +134,7 @@ export function createServer() {
   return http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     try {
-      if (req.method === 'POST' && url.pathname === '/zalo/webhook') return await onWebhook(req, res);
+      if (req.method === 'POST' && url.pathname === '/zalo/webhook') return await onWebhook(req, res, url.searchParams.get('bot') === '2' ? 2 : 1);
       if (req.method === 'POST' && url.pathname === '/api/notify') return await onNotify(req, res);
       if (req.method === 'GET' && url.pathname === '/api/processed') return onProcessed(url, res);
       if (req.method === 'GET' && url.pathname === '/api/inbox') return onInbox(url, res);
@@ -154,6 +156,7 @@ export function createServer() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   createServer().listen(config.port, config.host, () => console.log(`Bot dang chay o cong ${config.port}`));
   startWatcher();
+  ensureBot2Webhook();
   // Nhắc việc 7h, báo cáo tuần/tháng của Trợ lí 3 AI, gửi tới anh (người đầu tiên trong ALLOWED_ZALO_IDS).
   startScheduler(async (text) => {
     const chatId = getSetting('owner_chat_id') || config.allowedUsers[0];
